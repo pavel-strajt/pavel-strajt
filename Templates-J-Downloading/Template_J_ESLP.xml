@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="\\Appsv\Programy\Xslt\Preview.xslt"?>
+<judikatura quality="4" VersionLink="0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="file://Appsv/Programy/Xsd/Beck-praha-general.xsd" DokumentName="">
+  <hlavicka-judikatura>
+    <autor>
+      <item>Evropský soud pro lidská práva</item>
+    </autor>
+	  <citace>SPISOVAZNACKAVALUE</citace>
+		<datschvaleni>DATUMVALUE</datschvaleni>
+    <druh>DRUHVALUE</druh>
+  </hlavicka-judikatura>
+  <judikatura-section id-block="js1" quality="17">
+    <header-j>
+      <casopis>Výběr judikatury</casopis>
+      <citace>CITACEVALUE</citace>
+      <datvydani>DATUMVALUE</datvydani>
+      <id-external>IDEXTERNALVALUE</id-external>
+      <info1>VYZNAMNOSTVALUE</info1>
+      <info3 />
+      <info4xml>
+        <item>POPISVALUE</item>
+      </info4xml>
+      <info5xml>
+        <item>NAZEVSTEZOVATELEVALUE</item>
+      </info5xml>
+      HESLAVALUE
+    </header-j>
+    <html-text/>
+  </judikatura-section>
+</judikatura>

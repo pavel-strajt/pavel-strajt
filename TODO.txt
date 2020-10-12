@@ -1,0 +1,18 @@
+﻿!!!AŤ ŽÍJE KONCEPČNOST!!!
+
+Vše:
+Popřemýšlet o jinačím layoutu, protože se to celkem dá rozdělit do dvou částí
+	a) stažení dat
+	b) transformace dat
+	vytvořit nějaký interface a třídy, co ho implementují a pak spouštět pomocí něj?
+	vlákna zapouzdřit dovnitř toho IF, stejně jako přechod na generování xml
+	(blokující seznam, dvě vlákna)
+
+NSOUD, SNI: připojení někde získat, nevytvářet pokaždé nové
+
+ROzdělit na tři logy:
+1) Duplicity
+2) Chyby při exportu
+3) Vše ostatní
+
+NSOUD: přejmenování složky, přejmenování vzorového XML

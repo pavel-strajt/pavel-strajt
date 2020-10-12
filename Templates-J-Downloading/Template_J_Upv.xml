@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="\\Appsv\Programy\Xslt\Preview.xslt"?>
+<judikatura quality="4" VersionLink="0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="file://Appsv/Programy/Xsd/Beck-praha-general.xsd">
+	<hlavicka-judikatura>
+		<autor>
+			<item>Úřad průmyslového vlastnictví</item>
+		</autor>
+		<citace/>
+		<datschvaleni/>
+		<druh>Rozhodnutí</druh>
+		<lawarea>
+			<item>Právo duševního vlastnictví</item>
+		</lawarea>
+	</hlavicka-judikatura>
+	<judikatura-section id-block="js1" quality="17">
+		<header-j>
+			<casopis>Správní a soudní rozhodnutí ÚPV</casopis>
+			<citace/>
+			<id-external/>
+			<info4xml>
+				<item></item>
+			</info4xml>
+			<rejstrik2/>
+			<titul/>
+		</header-j>
+		<html-text/>
+	</judikatura-section>
+</judikatura>

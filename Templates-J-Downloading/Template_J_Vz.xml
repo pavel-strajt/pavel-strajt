@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="\\Appsv\Programy\Xslt\Preview.xslt"?>
+<vestnik xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="file://Appsv/Programy/Xsd/Beck-praha-general.xsd" quality="1" VersionLink="0">
+	<hlavicka-vestnik>
+		<autor>
+			<item>Vláda</item>
+		</autor>
+		<casopis>Usnesení vlády</casopis>
+		<castka></castka>
+		<citace></citace>
+		<datschvaleni></datschvaleni>
+		<druh>Usnesení</druh>
+		<titul></titul>
+	</hlavicka-vestnik>
+	<html-text>
+	</html-text>
+</vestnik>

@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="\\Appsv\Programy\Xslt\Preview.xslt"?>
+<judikatura quality="4" VersionLink="0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="file://Appsv/Programy/Xsd/Beck-praha-general.xsd" DokumentName="">
+	<hlavicka-judikatura>
+		<autor>
+			<item>Ústavní soud</item>
+		</autor>
+		<citace/>
+		<datschvaleni/>
+		<druh/>
+		<poznamka/>
+		<rejstrik/>
+	</hlavicka-judikatura>
+	<judikatura-section id-block="js1" quality="17">
+		<header-j>
+			<casopis>nalus.usoud.cz</casopis>
+			<citace/>
+			<ecli/>
+			<id-external/>
+			<info1/>
+			<info3/>
+			<info4xml>
+				<item></item>
+			</info4xml>
+			<info5xml/>
+			<rejstrik2/>
+			<titul/>
+		</header-j>
+		<html-text/>
+	</judikatura-section>
+</judikatura>

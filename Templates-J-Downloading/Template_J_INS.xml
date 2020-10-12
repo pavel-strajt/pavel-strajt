@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="\\Appsv\Programy\Xslt\Preview.xslt"?>
+<judikatura quality="4" DokumentName="" VersionLink="0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="file://Appsv/Programy/Xsd/Beck-praha-general.xsd">
+	<hlavicka-judikatura>
+		<autor>
+			<item></item>
+		</autor>
+		<citace/>
+		<datschvaleni/>
+		<druh>Insolvence</druh>
+	</hlavicka-judikatura>
+	<judikatura-section id-block="js1" quality="17">
+		<header-j>
+			<casopis>isir.justice.cz</casopis>
+			<citace />
+			<datvydani />
+			<id-external/>
+      <titul />
+		</header-j>
+    <html-text/>
+	</judikatura-section>
+</judikatura>
