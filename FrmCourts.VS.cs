@@ -24,7 +24,7 @@ namespace DataMiningCourts
 
         private static string ROOT_URL = @"https://www.justice.cz/";
 
-        private static readonly Regex regDate = new Regex(@"(Praha|Olomouc)\s(?<date>\d{1,2}.\s\w*\s\d{4})");
+        private static readonly Regex regDate = new Regex(@"(Praha|Olomouc)\s+(?<date>\d{1,2}\.\s*\w*\s[12]\d{3})");
 
         private static readonly Regex regSpZn = new Regex(@"^(?<SpZn>Ncp \d*/\d{4})");
 
@@ -61,6 +61,7 @@ namespace DataMiningCourts
                 {
 #if !DUMMY_DB
                     conn.Open();
+					SqlCommand cmd = conn.CreateCommand();
 #endif
 
                     while (!VS_seznamElementuKeZpracovani.IsCompleted)
@@ -68,27 +69,33 @@ namespace DataMiningCourts
                         while (!VS_seznamElementuKeZpracovani.IsCompleted && !VS_seznamElementuKeZpracovani.TryTake(out data, 2000)) ;
                         if (data != null && data.Attributes["href"] != null)
                         {
-                            var spZnFileName = data.InnerText.Trim();
+                            var spZnFileName = data.InnerText.Replace("&nbsp;", " ").Trim();
                             var spZn = spZnFileName;
                             var matchSpZn = regSpZn.Match(spZn);
                             if (matchSpZn.Success)
                             {
-                                spZn = matchSpZn.Groups["SpZn"].Value;
+                                spZn = matchSpZn.Groups["SpZn"].Value.Trim();
                             }
 
-                            Utility.CreateDocumentName("J", spZnFileName, null, out string fileFullPath);
-                            fileFullPath = string.Format(@"{0}\{1}", this.txtWorkingFolder.Text, fileFullPath);
-
+                            Utility.CreateDocumentName("J", spZnFileName, null, out string documentName);
+							if (this.cbCheckDuplicities.Checked)
+							{
+								cmd.CommandText = "SELECT 1 FROM Dokument WHERE DokumentName='" + documentName + "'";
+								Object oResult = cmd.ExecuteScalar();
+								if (oResult != null)
+									continue;
+							}
+                            var fileFullPath = string.Format(@"{0}\{1}", this.txtWorkingFolder.Text, documentName);
                             var extUrl = ROOT_URL + data.Attributes["href"].Value;
                             VS_seznamPdfKeStazeni.Add(new PdfToDownload(extUrl, fileFullPath + ".pdf"));
-                            VS_VytvoreniXml(spZn, extUrl, fileFullPath + ".xml", spZnFileName);
+                            VS_VytvoreniXml(spZn, extUrl, fileFullPath + ".xml", spZnFileName, documentName);
                         }
                     }
                 }
             });
         }
 
-        private void VS_VytvoreniXml(string spZn, string extUrl, string xmlFullPath, string fullSpZn)
+        private void VS_VytvoreniXml(string spZn, string extUrl, string xmlFullPath, string fullSpZn, string documentName)
         {
             var newXmlDocument = new XmlDocument();
 #if LOCAL_TEMPLATES
@@ -97,6 +104,7 @@ namespace DataMiningCourts
             string sPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             newXmlDocument.Load(Path.Combine(sPath, @"Templates-J-Downloading\Template_J_VS.xml"));
 #endif
+            newXmlDocument.DocumentElement.Attributes["DokumentName"].Value = documentName;
 
             var xnExt = newXmlDocument.SelectSingleNode("//id-external");
             xnExt.InnerText = extUrl;
@@ -104,7 +112,7 @@ namespace DataMiningCourts
             var xnAuthor = newXmlDocument.DocumentElement.SelectSingleNode("//autor/item");
             xnAuthor.InnerText = fullSpZn.Contains("VS v Olomouci") ? "Vrchní soud v Olomouci" : "Vrchní soud v Praze";
 
-            var xnCitace = newXmlDocument.DocumentElement.SelectSingleNode("//citace");
+            var xnCitace = newXmlDocument.DocumentElement.FirstChild.SelectSingleNode("./citace");
             xnCitace.InnerText = spZn;
 
             var xnDatSchvaleni = newXmlDocument.DocumentElement.SelectSingleNode("//datschvaleni");
@@ -216,11 +224,6 @@ namespace DataMiningCourts
 
         private void VS_btnToXml_Click(object sender, EventArgs e)
         {
-            if (!VS_DocumentsWereDownloaded &&
-                     MessageBox.Show(this, "Nedošlo ke stažení dokumentů z webu, přejete si přesto převést obsah pracovní složky?", "VS", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == System.Windows.Forms.DialogResult.No)
-            {
-                return;
-            }
             this.VS_btnWordToXml.Enabled = false;
             this.processedBar.Value = 0;
 
@@ -262,6 +265,23 @@ namespace DataMiningCourts
                     string sPathWordXml = String.Format(@"{0}\W_{1}-0.xml", sOutputDocumentFolder, sDocumentName);
                     string sPathWordXmlXml = String.Format(@"{0}\W_{1}-0.xml.xml", sOutputDocumentFolder, sDocumentName);
                     OpenFileInWordAndSaveInWXml(docFullName, sPathWordXml);
+
+                    //One line XML resave
+                    XmlDocument d = new XmlDocument();
+                    d.Load(sPathWordXml);
+                    Regex reg3 = new Regex(@"\s+");
+                    d.DocumentElement.InnerXml = reg3.Replace(d.DocumentElement.InnerXml, " ");
+
+                    // we save the word xml as one line xml file
+                    XmlWriterSettings xwsSettings = new XmlWriterSettings();
+                    xwsSettings.Indent = false;
+                    xwsSettings.Encoding = System.Text.Encoding.UTF8;
+
+                    XmlWriter xw = XmlWriter.Create(sPathWordXml, xwsSettings);
+                    d.WriteContentTo(xw);
+                    xw.Flush();
+                    xw.Close();
+
                     File.Copy(sPathWordXml, sPathWordXmlXml, true);
                     string sPathOutputXml = String.Format(@"{0}\{1}.xml", sOutputDocumentFolder, sDocumentName);
                     File.Copy(sPathXmlHeader, sPathOutputXml, true);
@@ -330,7 +350,7 @@ namespace DataMiningCourts
             var nodes = doc.DocumentNode.SelectNodes(".//div[contains(@class,'main-article')]/p/a");
             VS_PDF_celkemZaznamuKeZpracovani = VS_XML_celkemZaznamuKeZpracovani = nodes.Count;
 
-            if (VS_XML_celkemZaznamuKeZpracovani > 0) ;
+            if (VS_XML_celkemZaznamuKeZpracovani > 0)
             {
                 foreach (HtmlNode uzelKPridani in nodes)
                 {
@@ -406,6 +426,7 @@ namespace DataMiningCourts
             var toDelete = new List<XmlNode>();
             var zakladniPredpisy = new List<string>();
             var veta = string.Empty;
+			//Regex rgNcp = new Regex(@"^Ncp\s*\d+/\d+$");
 
             var xnCitace = dOut.DocumentElement.SelectSingleNode("//citace");
             var specifikaceHit = false;
@@ -414,6 +435,7 @@ namespace DataMiningCourts
                 var innerText = xn.InnerText.Trim();
                 if (innerText == "USNESENÍ")
                 {
+                    toDelete.Add(xn);
                     break;
                 }
                 else
@@ -423,16 +445,25 @@ namespace DataMiningCourts
 
                 if (innerText == xnCitace.InnerText.Trim())
                 {
+                    xn = xn.NextSibling;
                     continue;
                 }
                 if (specifikaceHit && !string.IsNullOrWhiteSpace(innerText))
                 {
-                    zakladniPredpisy.Add(innerText);
+					//if (!rgNcp.IsMatch(innerText))
+						zakladniPredpisy.Add(innerText);
                 }
-                if (innerText.StartsWith("specifikace:"))
-                {
-                    veta = innerText.Replace("specifikace:", string.Empty).Trim();
-                    specifikaceHit = true;
+				if (innerText.StartsWith("specifikace:"))
+				{
+					veta = innerText.Replace("specifikace:", string.Empty).Trim();
+					specifikaceHit = true;
+					while ((xn.NextSibling != null) && !String.IsNullOrWhiteSpace(xn.NextSibling.InnerText))
+					{
+						veta += " " + xn.NextSibling.InnerText;
+						xn = xn.NextSibling;
+						if ((xn.NextSibling == null) || String.IsNullOrWhiteSpace(xn.NextSibling.InnerText))
+							break;
+					}
                 }
                 xn = xn.NextSibling;
             }
@@ -451,6 +482,9 @@ namespace DataMiningCourts
             var xnP = dOut.CreateElement("p");
             xnVeta.AppendChild(xnP);
             xnP.InnerText = veta;
+
+			xn = dOut.SelectSingleNode("/*/judikatura-section/header-j/issentence-intext");
+			xn.InnerText = "1";
 
             if (zakladniPredpisy.Count > 0)
             {
@@ -471,7 +505,7 @@ namespace DataMiningCourts
             }
 
             var citationNumber = this.VS_citationService.GetNextCitation(date.Year);
-            var sCitation = String.Format("Výběr {0}/{1}", citationNumber, date.Year);
+            var sCitation = String.Format("{0}{1}/{2}", VS_citationService.GetCitationPrefix(Courts.cVS), citationNumber, date.Year);
             var xnCitation = dOut.DocumentElement.SelectSingleNode("./judikatura-section/header-j/citace");
             xnCitation.InnerText = sCitation;
 

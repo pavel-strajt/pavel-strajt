@@ -247,8 +247,12 @@ namespace DataMiningCourts
                 sw.Flush();
                 sw.Close();
             }
+			if (Zpracovat1HtmUsDokument(sFullPath))
+			{
+				File.Delete(sFullPath);
+			}
 
-            ++NALUS_aktualneZpracovavanyZaznam;
+			++NALUS_aktualneZpracovavanyZaznam;
             this.processedBar.Value = Nalus_ComputeActuallProgress();
         }
 
@@ -852,10 +856,57 @@ namespace DataMiningCourts
             oLinking.Run(0, sDocumentName, dOut, 17);
             dOut = oLinking.LinkedDocument;
 
+			// výrok, odůvodněni
+			string s;
+			XmlAttribute a;
+			XmlElement elHtmlOduvodneni = null;
+			XmlNode xnHtmlVyrok = dOut.SelectSingleNode("/*/judikatura-section/html-text");
+			xn = xnHtmlVyrok.FirstChild;
+			while(xn != null)
+			{
+				if (elHtmlOduvodneni != null)
+				{
+					xn2 = xn.NextSibling;
+					elHtmlOduvodneni.AppendChild(xn);
+					xn = xn2;
+				}
+				else
+				{
+					s = xn.InnerText.ToLower();
+					Utility.RemoveWhiteSpaces(ref s);
+					if (s.Equals("odůvodnění") || s.Equals("odůvodnění:"))
+					{
+						elHtmlOduvodneni = dOut.CreateElement("html-text");
+						elHtmlOduvodneni.SetAttribute("role", "oduvodneni");
+						xn2 = xn.NextSibling;
+						a = dOut.CreateAttribute("class");
+						a.Value = "center";
+						xn.Attributes.Append(a);
+						elHtmlOduvodneni.AppendChild(xn);
+						xn = xn2;
+					}
+					else
+						xn = xn.NextSibling;
+				}
+			}
+			if (elHtmlOduvodneni != null)
+			{
+				dOut.DocumentElement.FirstChild.NextSibling.AppendChild(elHtmlOduvodneni);
+				a = dOut.CreateAttribute("role");
+				a.Value = "vyrok";
+				xnHtmlVyrok.Attributes.Append(a);
+			}
+
             // uložení
-            xn2 = dOut.SelectSingleNode("//html-text");
-            UtilityXml.RemoveRedundantEmptyRowsInXmlDocument(ref xn2);
-            UtilityXml.AddCite(dOut, sDocumentName, this.dbConnection);
+            XmlNodeList xNodes = dOut.SelectNodes("//html-text");
+			for (int i = 0; i < xNodes.Count; i++)
+			{
+				xn2 = xNodes[i];
+				UtilityXml.RemoveRedundantEmptyRowsInXmlDocument(ref xn2);
+			}
+            UtilityXml.AddCite(dOut, sDocumentName, this.dbConnection);     // zohlední pouze linky v odůvodnění
+			this.AddPrezkoumava(dbConnection, ref dOut);
+
             /* Před uložením odstaraníme prázdné elementy hlavičky */
             UtilityXml.DeleteEmptyNodesFromHeaders(dOut);
             /* Protože se nedělá export, je nutné přidat funkci na opravu http linků */
@@ -1017,5 +1068,65 @@ namespace DataMiningCourts
             }
             return true;
         }
-    }
+
+		private void AddPrezkoumava(SqlConnection pConn, ref XmlDocument pD)
+		{
+			// Pokud je ve Stažené info 2 (alespoň) "vyhověno", přiřadí se výsledek Zrušeno; v ostatních případech se přiřadí výsledek Nezměněno.
+			string sVysledek;
+			XmlNode xn = pD.SelectSingleNode("/*/judikatura-section/header-j/info4xml/item");
+			if (xn == null)
+				return;
+			if (xn.InnerText.ToLower().Contains("vyhověno"))
+				sVysledek = "Zrušeno";
+			else
+				sVysledek = "Nezměněno";
+			xn = pD.SelectSingleNode("/*/judikatura-section/html-text[@role='vyrok']");
+			if (xn == null)
+				return;
+
+			// Do Přezkoumává se automaticky doplní judikáty prolinkované ve výrokové části vyjma rozhodnutí Ústavního soudu
+			List<string> lhrefs = new List<string>();
+			SqlCommand cmd = pConn.CreateCommand();
+			XmlElement elPrezkoumava = pD.CreateElement("prezkoumava");
+			XmlElement elItem, el;
+			XmlNodeList xNodes = xn.SelectNodes(".//link[starts-with(@href,'J') and not(type='multi')]");
+			foreach(XmlNode xn1 in xNodes)
+			{
+				if (!lhrefs.Contains(xn1.Attributes["href"].Value))
+				{
+					cmd.CommandText = @"SELECT Dokument.Citation,HeaderJ.DateApproval,TKind.TKindName,TAuthor.TAuthorName FROM Dokument
+	INNER JOIN HeaderJ ON Dokument.IDDokument=HeaderJ.IDDokument
+	INNER JOIN DokumentAuthor ON Dokument.IDDokument=DokumentAuthor.IDDokument
+	INNER JOIN TKind ON HeaderJ.IDTKind=TKind.IDTKind
+	INNER JOIN TAuthor ON DokumentAuthor.IDTAuthor=TAuthor.IDTAuthor
+	WHERE DokumentAuthor.IDTAuthor<>494 AND Dokument.DokumentName='" + xn1.Attributes["href"].Value + "'";
+					using (SqlDataReader dr = cmd.ExecuteReader())
+					{
+						if (dr.HasRows)
+						{
+							dr.Read();
+							elItem = pD.CreateElement("item-prezkum");
+							el = pD.CreateElement("cislojednaci");
+							el.SetAttribute("href", xn1.Attributes["href"].Value);
+							el.InnerText = dr.GetString(0);
+							elItem.AppendChild(el);
+							el = pD.CreateElement("datschvaleni");
+							el.InnerText = dr.GetDateTime(1).ToString("yyyy-MM-dd");
+							elItem.AppendChild(el);
+							el = pD.CreateElement("druh");
+							el.InnerText = dr.GetString(2);
+							elItem.AppendChild(el);
+							el = pD.CreateElement("soud");
+							el.InnerText = dr.GetString(3);
+							elItem.AppendChild(el);
+							elItem.InnerXml += "<vysledek>" + sVysledek + "</vysledek>";
+							elPrezkoumava.AppendChild(elItem);
+						}
+					}
+				}
+			}
+			if (elPrezkoumava.ChildNodes.Count > 0)
+				UtilityXml.InsertElementInAlphabeticalOrder(pD.DocumentElement.FirstChild, elPrezkoumava);
+		}
+	}
 }

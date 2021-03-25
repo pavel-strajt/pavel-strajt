@@ -20,12 +20,15 @@ namespace DataMiningCourts
     {
         private static int NS_MAXIMUM_NUMBER_SHOWED_RESULTS = 1000;
         /* Pouze pro jedno datum, proto se den/měsíc/rok vyplňuje dvakrát stejný */
-        private static string NS_COURT = @"http://novyweb.nsoud.cz/Judikatura/judikatura_ns.nsf/$$WebSearch1?SearchView&Query=%5Bdatum_predani_na_web%5D%3E%3D{0}%2F{1}%2F{2}%20AND%20%5Bdatum_predani_na_web%5D%3C%3D{0}%2F{1}%2F{2}&SearchMax={3}&Start=1&Count={3}&pohled=1";
-        private static string NS_COURT_HREF_CONTENT = "WebSearch";
+        //private static string NS_COURT = @"http://novyweb.nsoud.cz/Judikatura/judikatura_ns.nsf/$$WebSearch1?SearchView&Query=%5Bdatum_predani_na_web%5D%3E%3D{0}%2F{1}%2F{2}%20AND%20%5Bdatum_predani_na_web%5D%3C%3D{0}%2F{1}%2F{2}&SearchMax={3}&Start=1&Count={3}&pohled=1";
+		private static string NS_COURT = @"http://www.nsoud.cz/Judikatura/judikatura_ns.nsf/$$WebSearch1?SearchView&Query=%5Bdatum_predani_na_web%5D%3E%3D{0}%2F{1}%2F{2}%20AND%20%5Bdatum_predani_na_web%5D%3C%3D{0}%2F{1}%2F{2}&SearchMax={3}&Start=1&Count={3}&pohled=1";
+		private static string NS_COURT_HREF_CONTENT = "WebSearch";
         private static string NS_COURT_HREF_SEARCHING_QUERY_CONTENT = "Query";
-        private static string NS_INDEX = @"http://novyweb.nsoud.cz/";
+		//private static string NS_INDEX = @"http://novyweb.nsoud.cz/";
+		private static string NS_INDEX = "https://www.nsoud.cz/";
 
-        private DateTime NS_minimumLoadedDate;
+
+		private DateTime NS_minimumLoadedDate;
         private DateTime NS_maximumLoadedDate;
         private DateTime NS_actualLoadedDate;
 

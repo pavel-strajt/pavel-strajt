@@ -56,7 +56,7 @@ namespace DataMiningCourts
         /// {1} = Court prefix
         /// {2} = Year
         /// </summary>
-        private static string DB_QUERY_STUB = @"SELECT MAX(CONVERT(INT,SUBSTRING(Citation,{0},CHARINDEX('/',Citation)-{0}))) FROM HeaderSub WHERE Citation LIKE '{1}%/{2}'";
+        private static string DB_QUERY_STUB = @"SELECT MAX(ArticleNumber) FROM HeaderSub WHERE Citation LIKE '{1}%/{2}'";
 
         /// <summary>
         /// Transform Court type to Citation prefix (e.g. NejvyssiSoud => NS , etc)
@@ -94,6 +94,8 @@ namespace DataMiningCourts
                 case FrmCourts.Courts.cJV:
                     return "";
 
+                case FrmCourts.Courts.cVS:
+                    return "Výběr ";
                 default:
                     return String.Empty;
             }
@@ -331,26 +333,22 @@ namespace DataMiningCourts
         {
             int iResult = CitationService.DEFAULT_NUMBER;
 #if !DUMMY_DB
-            try
+            using (SqlConnection conn = new SqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings["LexData"].ConnectionString))
             {
-                using (SqlConnection conn = new SqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings["LexData"].ConnectionString))
+                conn.Open();
+
+                string sCitationPrefix = CourtToCitationPrefix(this.court);
+                string sQuery = String.Format(DB_QUERY_STUB, sCitationPrefix.Length, sCitationPrefix, pYear);
+                SqlCommand cmd = new SqlCommand(sQuery, conn);
+
+                object oResult = cmd.ExecuteScalar();
+                string sValue = oResult.ToString();
+
+                if (!String.IsNullOrEmpty(sValue))
                 {
-                    conn.Open();
-
-                    string sCitationPrefix = CourtToCitationPrefix(this.court);
-                    string sQuery = String.Format(DB_QUERY_STUB, sCitationPrefix.Length, sCitationPrefix, pYear);
-                    SqlCommand cmd = new SqlCommand(sQuery, conn);
-
-                    object oResult = cmd.ExecuteScalar();
-                    string sValue = oResult.ToString();
-
-                    if (!String.IsNullOrEmpty(sValue))
-                    {
-                        iResult = Int32.Parse(sValue) + 1;
-                    }
+                    iResult = Int32.Parse(sValue) + 1;
                 }
             }
-            catch {/* Hnus, ale co s tím mám dělat?*/}
 #endif
 
             /* Add Citation for a year in any case */
@@ -433,7 +431,7 @@ namespace DataMiningCourts
             if (DO_CHECK_DUPLICITIES && this.datesReferenceNumbers.Value.TryGetValue(pDate, out listOfReferenceNumbersForDate))
             {
                 string referenceNumbersToLowerNoWhitespaces = pReferenceNumber.ToLower();
-				referenceNumbersToLowerNoWhitespaces = UtilityBeck.Utility.GetReferenceNumberNorm(referenceNumbersToLowerNoWhitespaces, out string sNormValue2);
+                referenceNumbersToLowerNoWhitespaces = UtilityBeck.Utility.GetReferenceNumberNorm(referenceNumbersToLowerNoWhitespaces, out string sNormValue2);
                 /* List search */
                 bResult |= listOfReferenceNumbersForDate.Contains(referenceNumbersToLowerNoWhitespaces);
             }
@@ -516,6 +514,11 @@ namespace DataMiningCourts
         {
             /* DO not Increase a number & Release the lock*/
             semsOfTheYear[year].Release();
+        }
+
+        public string GetCitationPrefix(FrmCourts.Courts court)
+        {
+            return CourtToCitationPrefix(court);
         }
     }
 }

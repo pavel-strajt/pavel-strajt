@@ -92,190 +92,193 @@ namespace DataMiningCourts
                 this.parentWindowForm.WriteIntoLogCritical("Download document 1:\t" + ex.Message);
             }
 
-            //docs
-            var docNodes = xmlDoc.DocumentElement.SelectNodes("//table[@class='lfr-table djv-agenda-table']//tr[td[contains(text(), 'Usnesení č.')]]");
-            if (docNodes != null)
-            {
-                foreach (XmlNode docNode in docNodes)
-                {
-                    var urlNode = docNode.SelectSingleNode("./td//a[.='DOC'][@href]");
-                    if (urlNode == null) continue;
+			//docs
+			if (xmlDoc != null)
+			{
+				var docNodes = xmlDoc.DocumentElement.SelectNodes("//table[@class='lfr-table djv-agenda-table']//tr[td[contains(text(), 'Usnesení č.')]]");
+				if (docNodes != null)
+				{
+					foreach (XmlNode docNode in docNodes)
+					{
+						var urlNode = docNode.SelectSingleNode("./td//a[.='DOC'][@href]");
+						if (urlNode == null) continue;
 
-                    xn = docNode.SelectSingleNode("./td[2]");
-                    if (xn == null)
-                        throw new ApplicationException("Nebyla nelezena buňka s číslem usnesení.");
+						xn = docNode.SelectSingleNode("./td[2]");
+						if (xn == null)
+							throw new ApplicationException("Nebyla nelezena buňka s číslem usnesení.");
 
-                    var cisloUsneseni = Regex.Replace(xn.InnerText.Replace("Usnesení č.", string.Empty), @"\s+", string.Empty);
-                    var docUrl = urlNode.Attributes["href"]?.Value;
-                    if (!string.IsNullOrWhiteSpace(docUrl))
-                    {
-                        try
-                        {
-                            url = new Uri(string.Format(parentWindowForm.VZ_PAGE_PREFIX, docUrl));
-                            var splits = docUrl.Split('/');
-                            var docNazev = splits[splits.Length - 1];
-                            var fileName = docNazev + ".doc";
+						var cisloUsneseni = Regex.Replace(xn.InnerText.Replace("Usnesení č.", string.Empty), @"\s+", string.Empty);
+						var docUrl = urlNode.Attributes["href"]?.Value;
+						if (!string.IsNullOrWhiteSpace(docUrl))
+						{
+							try
+							{
+								url = new Uri(string.Format(parentWindowForm.VZ_PAGE_PREFIX, docUrl));
+								var splits = docUrl.Split('/');
+								var docNazev = splits[splits.Length - 1];
+								var fileName = docNazev + ".doc";
 
-                            downloadedFilePath = Path.Combine(tmpFolder, fileName);
+								downloadedFilePath = Path.Combine(tmpFolder, fileName);
 
-                            Download(url, downloadedFilePath);
+								Download(url, downloadedFilePath);
 
-                            dokJUD = new VZ_WebDokumentJUD();
-                            dokJUD.PathOutputFolder = tmpFolder;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.parentWindowForm.WriteIntoLogCritical("Download document 2:\t" + ex.Message);
-                            continue;
-                        }
-                        try
-                        {
-                            var hlavicka = LoadHeader(cisloUsneseni, datum);
-                            dokJUD.ZalozDokument(hlavicka);
-                        }
-                        catch (DuplicityException ex)
-                        {
-                            this.parentWindowForm.WriteIntoLogDuplicity(ex.Message);
-                            continue;
-                        }
-                        catch (Exception ex)
-                        {
-                            this.parentWindowForm.WriteIntoLogCritical(cisloUsneseni + "Create header:\t" + ex.Message);
-                            continue;
-                        }
+								dokJUD = new VZ_WebDokumentJUD();
+								dokJUD.PathOutputFolder = tmpFolder;
+							}
+							catch (Exception ex)
+							{
+								this.parentWindowForm.WriteIntoLogCritical("Download document 2:\t" + ex.Message);
+								continue;
+							}
+							try
+							{
+								var hlavicka = LoadHeader(cisloUsneseni, datum);
+								dokJUD.ZalozDokument(hlavicka);
+							}
+							catch (DuplicityException ex)
+							{
+								this.parentWindowForm.WriteIntoLogDuplicity(ex.Message);
+								continue;
+							}
+							catch (Exception ex)
+							{
+								this.parentWindowForm.WriteIntoLogCritical(cisloUsneseni + "Create header:\t" + ex.Message);
+								continue;
+							}
 
-                        try
-                        {
-                            File.Move(downloadedFilePath, dokJUD.PathDoc);
-                            FrmCourts.OpenFileInWordAndSaveInWXml(dokJUD.PathDoc, dokJUD.PathTmpXml);
-                        }
-                        catch (Exception ex)
-                        {
-                            this.parentWindowForm.WriteIntoLogCritical("Download document 3:\t" + ex.Message);
-                            continue;
-                        }
+							try
+							{
+								File.Move(downloadedFilePath, dokJUD.PathDoc);
+								FrmCourts.OpenFileInWordAndSaveInWXml(dokJUD.PathDoc, dokJUD.PathTmpXml);
+							}
+							catch (Exception ex)
+							{
+								this.parentWindowForm.WriteIntoLogCritical("Download document 3:\t" + ex.Message);
+								continue;
+							}
 
-                        try
-                        {
-                            var sErrors = String.Empty;
-                            if (!dokJUD.ExportFromMsWord(ref sErrors))
-                            {
-                                this.parentWindowForm.WriteIntoLogExport(sErrors);
-                                continue;
-                            }
-                            if (!string.IsNullOrWhiteSpace(sErrors))
-                            {
-                                this.parentWindowForm.WriteIntoLogExport(sErrors);
-                            }
-                            //PostProcess
-                            var dOut = new XmlDocument();
-                            dOut.Load(dokJUD.PathResultXml);
+							try
+							{
+								var sErrors = String.Empty;
+								if (!dokJUD.ExportFromMsWord(ref sErrors))
+								{
+									this.parentWindowForm.WriteIntoLogExport(sErrors);
+									continue;
+								}
+								if (!string.IsNullOrWhiteSpace(sErrors))
+								{
+									this.parentWindowForm.WriteIntoLogExport(sErrors);
+								}
+								//PostProcess
+								var dOut = new XmlDocument();
+								dOut.Load(dokJUD.PathResultXml);
 
-                            var htmlTextNode = dOut.SelectSingleNode("//html-text");
-                            if (htmlTextNode != null)
-                            {
+								var htmlTextNode = dOut.SelectSingleNode("//html-text");
+								if (htmlTextNode != null)
+								{
 
-                                var attFilename = "Priloha_Vz_" + datum.Year + "_" + cisloUsneseni + "_UsnV-*.pdf";
-                                var attFiles = new DirectoryInfo(tmpFolder).GetFiles(attFilename).OrderBy(x => x.Name);
-                                var counter = 1;
-                                foreach (var attFile in attFiles)
-                                {
-                                    var docFrag = dOut.CreateDocumentFragment();
-                                    docFrag.InnerXml = "<priloha href=\"" + attFile.Name + "\" id-block=\"pr" + counter + "\"><title-num>Příloha č." + counter + "</title-num></priloha>";
+									var attFilename = "Priloha_Vz_" + datum.Year + "_" + cisloUsneseni + "_UsnV-*.pdf";
+									var attFiles = new DirectoryInfo(tmpFolder).GetFiles(attFilename).OrderBy(x => x.Name);
+									var counter = 1;
+									foreach (var attFile in attFiles)
+									{
+										var docFrag = dOut.CreateDocumentFragment();
+										docFrag.InnerXml = "<priloha href=\"" + attFile.Name + "\" id-block=\"pr" + counter + "\"><title-num>Příloha č." + counter + "</title-num></priloha>";
 
-                                    dOut.DocumentElement.InsertAfter(docFrag, htmlTextNode);
-                                    File.Move(attFile.FullName, Path.Combine(dokJUD.PathFolder, attFile.Name));
-                                    counter++;
-                                }
-                            }
-                            var vladaNode = htmlTextNode.SelectSingleNode("//p/span[contains(text(), 'VLÁDA ČESKÉ REPUBLIKY')]");
-                            if (vladaNode != null)
-                            {
-                                htmlTextNode.RemoveChild(vladaNode.ParentNode);
-                            }
-                            var imgNode = htmlTextNode.SelectSingleNode("//img[1]");
-                            if (imgNode != null)
-                            {
-                                imgNode.ParentNode.RemoveChild(imgNode);
-                            }
-                            var castkaNode = dOut.DocumentElement.SelectSingleNode("//hlavicka-vestnik/castka");
-                            if (castkaNode != null)
-                            {
-                                castkaNode.InnerText = cisloUsneseni + "/" + datum.Year;
-                            }
-                            var titulNode = dOut.DocumentElement.SelectSingleNode("//hlavicka-vestnik/titul");
-                            if (titulNode != null)
-                            {
-                                var pNodes = htmlTextNode.SelectNodes("//p");
-                                var titulText = string.Empty;
-                                var process = false;
-                                var boldDetected = false;
-                                var firstBoldDetected = false;
-                                foreach (XmlNode pNode in pNodes)
-                                {
-                                    if (pNode.InnerText == "Vláda")
-                                    {
-                                        break;
-                                    }
-                                    if (process)
-                                    {
-                                        boldDetected = pNode.HasChildNodes && pNode.ChildNodes.Count == 1 && pNode.FirstChild.Name.ToLower() == "b";
-                                        titulText += pNode.InnerText.Trim() + " ";
-                                        if (!firstBoldDetected && boldDetected)
-                                        {
-                                            firstBoldDetected = true;
-                                        }
-                                        if (!boldDetected && firstBoldDetected)
-                                        {
-                                            break;
-                                        }
-                                        continue;
-                                    }
-                                    if (pNode.InnerText == "USNESENÍ")
-                                    {
-                                        titulText += "Usnesení ";
-                                        continue;
-                                    }
-                                    if (pNode.InnerText == "VLÁDY ČESKÉ REPUBLIKY")
-                                    {
-                                        process = true;
-                                        titulText += "vlády České republiky ";
-                                        continue;
-                                    }
-                                }
-                                titulNode.InnerText = titulText.Trim();
-                            }
+										dOut.DocumentElement.InsertAfter(docFrag, htmlTextNode);
+										File.Move(attFile.FullName, Path.Combine(dokJUD.PathFolder, attFile.Name));
+										counter++;
+									}
+								}
+								var vladaNode = htmlTextNode.SelectSingleNode("//p/span[contains(text(), 'VLÁDA ČESKÉ REPUBLIKY')]");
+								if (vladaNode != null)
+								{
+									htmlTextNode.RemoveChild(vladaNode.ParentNode);
+								}
+								var imgNode = htmlTextNode.SelectSingleNode("//img[1]");
+								if (imgNode != null)
+								{
+									imgNode.ParentNode.RemoveChild(imgNode);
+								}
+								var castkaNode = dOut.DocumentElement.SelectSingleNode("//hlavicka-vestnik/castka");
+								if (castkaNode != null)
+								{
+									castkaNode.InnerText = cisloUsneseni + "/" + datum.Year;
+								}
+								var titulNode = dOut.DocumentElement.SelectSingleNode("//hlavicka-vestnik/titul");
+								if (titulNode != null)
+								{
+									var pNodes = htmlTextNode.SelectNodes("//p");
+									var titulText = string.Empty;
+									var process = false;
+									var boldDetected = false;
+									var firstBoldDetected = false;
+									foreach (XmlNode pNode in pNodes)
+									{
+										if (pNode.InnerText == "Vláda")
+										{
+											break;
+										}
+										if (process)
+										{
+											boldDetected = pNode.HasChildNodes && pNode.ChildNodes.Count == 1 && pNode.FirstChild.Name.ToLower() == "b";
+											titulText += pNode.InnerText.Trim() + " ";
+											if (!firstBoldDetected && boldDetected)
+											{
+												firstBoldDetected = true;
+											}
+											if (!boldDetected && firstBoldDetected)
+											{
+												break;
+											}
+											continue;
+										}
+										if (pNode.InnerText == "USNESENÍ")
+										{
+											titulText += "Usnesení ";
+											continue;
+										}
+										if (pNode.InnerText == "VLÁDY ČESKÉ REPUBLIKY")
+										{
+											process = true;
+											titulText += "vlády České republiky ";
+											continue;
+										}
+									}
+									titulNode.InnerText = titulText.Trim();
+								}
 
-                            var xnDocumentText = dOut.SelectSingleNode("//html-text");
-                            UtilityXml.RemoveRedundantEmptyRowsInXmlDocument(ref xnDocumentText);
-                            dOut.Save(dokJUD.PathResultXml);
+								var xnDocumentText = dOut.SelectSingleNode("//html-text");
+								UtilityXml.RemoveRedundantEmptyRowsInXmlDocument(ref xnDocumentText);
+								dOut.Save(dokJUD.PathResultXml);
 
-                            // výsledek
-                            var currentDocumentName = dokJUD.DocumentName;
+								// výsledek
+								var currentDocumentName = dokJUD.DocumentName;
 
-                            string outputDirectoryFullName = String.Format(@"{0}\{1}", this.parentWindowForm.XML_DIRECTORY, dokJUD.DocumentName);
-                            if (Directory.Exists(outputDirectoryFullName))
-                            {
-                                this.parentWindowForm.WriteIntoLogCritical("Složka pro dokumentName [{0}] již existuje. Může se jednat o problém s duplicitními spisovými značkami. Po uložení aktuálně stažených dokumentů do db stáhněte dokumenty za období znovu...", outputDirectoryFullName);
-                            }
-                            else
-                            {
-                                Directory.Move(dokJUD.PathFolder, outputDirectoryFullName);
-                                // mass rename if necesarry
-                                if (!String.Equals(dokJUD.DocumentName, currentDocumentName, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    Utility.MassRename(outputDirectoryFullName, dokJUD.DocumentName, currentDocumentName);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            this.parentWindowForm.WriteIntoLogCritical("Download document 4:\t" + ex.Message);
-                        }
-                    }
-                }
-            }
-            doneEvent.Set();
+								string outputDirectoryFullName = String.Format(@"{0}\{1}", this.parentWindowForm.XML_DIRECTORY, dokJUD.DocumentName);
+								if (Directory.Exists(outputDirectoryFullName))
+								{
+									this.parentWindowForm.WriteIntoLogCritical("Složka pro dokumentName [{0}] již existuje. Může se jednat o problém s duplicitními spisovými značkami. Po uložení aktuálně stažených dokumentů do db stáhněte dokumenty za období znovu...", outputDirectoryFullName);
+								}
+								else
+								{
+									Directory.Move(dokJUD.PathFolder, outputDirectoryFullName);
+									// mass rename if necesarry
+									if (!String.Equals(dokJUD.DocumentName, currentDocumentName, StringComparison.OrdinalIgnoreCase))
+									{
+										Utility.MassRename(outputDirectoryFullName, dokJUD.DocumentName, currentDocumentName);
+									}
+								}
+							}
+							catch (Exception ex)
+							{
+								this.parentWindowForm.WriteIntoLogCritical("Download document 4:\t" + ex.Message);
+							}
+						}
+					}
+				}
+			}
+			doneEvent.Set();
         }
 
         private void Download(Uri url, string filePath)

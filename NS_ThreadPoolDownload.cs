@@ -108,13 +108,16 @@ namespace DataMiningCourts
             {
                 // first, we need to get the exact size (in bytes) of the file we are downloading
                 Uri url = new Uri(sUrlToReadFileFrom);
-                System.Net.HttpWebRequest request = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url);
-                string sSource;
-                using (StreamReader reader = new StreamReader(request.GetResponse().GetResponseStream(), true))
-                {
-                    sSource = reader.ReadToEnd();
-                }
+				System.Net.HttpWebRequest request = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url);
+				
+				// toto je kvůli chybě certifikátu stránek NS
+				System.Net.ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
 
+				string sSource;
+				using (StreamReader reader = new StreamReader(request.GetResponse().GetResponseStream(), true))
+				{
+					sSource = reader.ReadToEnd();
+				}
 
                 HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
                 doc.OptionOutputAsXml = true;

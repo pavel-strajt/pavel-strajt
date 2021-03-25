@@ -1089,11 +1089,6 @@ namespace DataMiningCourts
 
 		private void NSS_btnToXml_Click(object sender, EventArgs e)
 		{
-			if (!NSS_DocumentsWereDownloaded &&
-					 MessageBox.Show(this, "Nedošlo ke stažení dokumentů z webu, přejete si přesto převést obsah pracovní složky?", "NSS", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == System.Windows.Forms.DialogResult.No)
-			{
-				return;
-			}
 			this.NSS_btnWordToXml.Enabled = false;
 			// jedeme od nuly...
 			this.processedBar.Value = 0;
