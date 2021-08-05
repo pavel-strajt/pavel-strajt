@@ -389,15 +389,15 @@ namespace DataMiningCourts
 
                     this.btnMineDocuments.Enabled = true;
                     this.processedBar.Value = 100;
-                    FinalizeLogs();
+                    FinalizeLogs(false);
                 }
             }
 
             // pokud existuje odkaz, tak se na něj znaviguju...
             if (seznamOdkazuKeZpracovani.Count > 0)
             {
-                browser.Navigate(seznamOdkazuKeZpracovani.Pop());
-            }
+				browser.Navigate(seznamOdkazuKeZpracovani.Pop());
+			}
         }
 
         public static readonly string REGEX_ROMAN_NUMBER = @"M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})";
@@ -555,7 +555,7 @@ namespace DataMiningCourts
                         break;
                     case "Datum rozhodnutí":    // Ze dne
                         zeDneNonUni = xnTd2.InnerText.Trim();
-                        sFromDay = Utility.ConvertDateIntoUniversalFormat(zeDneNonUni);
+                        sFromDay = Utility.ConvertDateIntoUniversalFormat(zeDneNonUni, out DateTime? dt);
                         xn = dOut.SelectSingleNode("//datschvaleni");
                         xn.InnerText = sFromDay;
                         break;
@@ -660,7 +660,7 @@ namespace DataMiningCourts
                                     {
                                         sValue = xn2.InnerText.Trim();
 #if !DUMMY_DB
-                                        cmd.CommandText = "SELECT 1 FROM TRegister WHERE TRegisterName='" + sValue + "' AND TRegisterJ=1";
+                                        cmd.CommandText = "SELECT 1 FROM TRegister WHERE TRegisterName='" + sValue + "'";
                                         oResult = cmd.ExecuteScalar();
 #endif
                                         if (oResult != null)
@@ -689,7 +689,7 @@ namespace DataMiningCourts
                         if (!String.IsNullOrWhiteSpace(xnTd2.InnerText))
                         {
                             xn = dOut.SelectSingleNode("//poznamka");
-                            //xn.InnerXml += "<p><span>" + xnTd2.InnerText.Trim() + "</span></p>";
+                            //xn.InnerXml += "<p>" + xnTd2.InnerText.Trim() + "</p>";
                             xn.InnerXml += "<p>" + xnTd2.InnerText.Trim() + "</p>";
                         }
                         break;
@@ -732,21 +732,11 @@ namespace DataMiningCourts
             iNumber = this.NALUS_CitationService.GetNextCitation(dtFromDay.Year);
             string sCitation = "ÚS " + (iNumber).ToString() + "/" + sYear;
             xn.InnerText = sCitation;
-            // odstranění prázdných elementů z hlavičky
-            xn = dOut.DocumentElement.FirstChild.FirstChild;
-            while (xn != null)
-            {
-                if (String.IsNullOrWhiteSpace(xn.InnerText))
-                {
-                    xn2 = xn.NextSibling;
-                    xn.ParentNode.RemoveChild(xn);
-                    xn = xn2;
-                    continue;
-                }
-                xn = xn.NextSibling;
-            }
 
-            AddLawArea(this.dbConnection, dOut.DocumentElement.FirstChild);
+			// odstranění prázdných elementů z hlavičky
+			UtilityXml.RemoveEmptyElementsFromHeader(ref dOut);
+
+			AddLawArea(this.dbConnection, dOut.DocumentElement.FirstChild, false);
 
             // doplnění textu
             xn2 = dOut.SelectSingleNode("//html-text");
@@ -764,7 +754,7 @@ namespace DataMiningCourts
             {
                 if (xn.NodeType == XmlNodeType.Text)
                 {
-                    //xn2.InnerXml += "<p><span>" + xn.InnerText.TrimStart().Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") + " </span></p>";
+                    //xn2.InnerXml += "<p>" + xn.InnerText.TrimStart().Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") + " </p>";
                     xn2.InnerXml += "<p>" + xn.InnerText.TrimStart().Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") + " </p>";
                     if ((xn.NextSibling != null) && xn.NextSibling.Name.Equals("br"))
                         xn = xn.NextSibling;
@@ -784,15 +774,9 @@ namespace DataMiningCourts
                     else
                     {
                         if (xn.Attributes["style"] != null && xn.Attributes["style"].Value == "font-weight:bold")
-                        {
-                            //xn2.InnerXml += "<p><span style=\"font-weight:bold;\">" + xn.InnerXml + "</span></p>";
                             xn2.InnerXml += "<p><b>" + xn.InnerXml + "</b></p>";
-                        }
                         else
-                        {
-                            //xn2.InnerXml += "<p><span>" + xn.InnerXml + "</span></p>";
                             xn2.InnerXml += "<p>" + xn.InnerXml + "</p>";
-                        }
                         if ((xn.NextSibling != null) && xn.NextSibling.Name.Equals("br"))
                             xn2.InnerXml += "<p/>";
                     }
@@ -830,9 +814,8 @@ namespace DataMiningCourts
                 xn = xn.NextSibling;
             }
             // vytvoření složky výsledného xml
-            string sDocumentName, judikaturaSectionDokumentName;
-            if (!Utility.CreateDocumentName("J", sSpZn, sYear, out sDocumentName) ||
-                    !Utility.CreateDocumentName("J", sCitation, sYear, out judikaturaSectionDokumentName))
+            if (!Utility.CreateDocumentName("J", sSpZn, sYear, out string sDocumentName) ||
+                    !Utility.CreateDocumentName("J", sCitation, sYear, out string judikaturaSectionDokumentName))
             {
                 WriteIntoLogCritical(String.Format("{0}: Nevytvořen název dokumentu!", pPath));
                 this.NALUS_CitationService.RevertCitationForAYear(dtFromDay.Year);
@@ -897,28 +880,29 @@ namespace DataMiningCourts
 				xnHtmlVyrok.Attributes.Append(a);
 			}
 
-            // uložení
+			// uložení
+			sText2 = "";
             XmlNodeList xNodes = dOut.SelectNodes("//html-text");
 			for (int i = 0; i < xNodes.Count; i++)
 			{
 				xn2 = xNodes[i];
 				UtilityXml.RemoveRedundantEmptyRowsInXmlDocument(ref xn2);
+				sText2 += xn2.InnerText;
+				Utility.RemoveWhiteSpaces(ref sText2);
 			}
-            UtilityXml.AddCite(dOut, sDocumentName, this.dbConnection);     // zohlední pouze linky v odůvodnění
 			this.AddPrezkoumava(dbConnection, ref dOut);
+			UtilityXml.AddCite(dOut, sDocumentName, this.dbConnection);     // zohlední pouze linky v odůvodnění a přeskočí ty v přezkoumává
 
             /* Před uložením odstaraníme prázdné elementy hlavičky */
-            UtilityXml.DeleteEmptyNodesFromHeaders(dOut);
+            UtilityXml.RemoveEmptyElementsFromHeader(ref dOut);
             /* Protože se nedělá export, je nutné přidat funkci na opravu http linků */
             UtilityXml.RepairHttpLinks(ref dOut);
 
             dOut.Save(Path.Combine(this.txtOutputFolder.Text, sDocumentName, sDocumentName) + ".xml");
             // porovnání obsahu původního htm a výsleného xml
-            sText2 = xn2.InnerText;
-            Utility.RemoveWhiteSpaces(ref sText2);
             if (!sText1.Equals(sText2))
             {
-                WriteIntoLogExport(String.Format("{0}: Nesouhlas výstupního textu!", pPath));
+                WriteIntoLogCritical(String.Format("{0}: Nesouhlas výstupního textu!", pPath));
                 this.NALUS_CitationService.RevertCitationForAYear(dtFromDay.Year);
                 return false;
             }
@@ -991,10 +975,7 @@ namespace DataMiningCourts
                         }
                     }
                     else
-                    {
-                        //pXnOut.InnerXml += "<p><span>" + sValue + " </span></p>";
                         pXnOut.InnerXml += "<p>" + sValue + " </p>";
-                    }
                 }
                 else if (xn.Name.Equals("br"))
                 {
@@ -1050,15 +1031,9 @@ namespace DataMiningCourts
                 else if (xn.Name.Equals("span") || xn.Name.Equals("a"))
                 {
                     if (xn.Attributes["style"] != null && xn.Attributes["style"].Value == "font-weight:bold")
-                    {
-                        //pXnOut.InnerXml += "<p><span style=\"font-weight:bold;\">" + xn.InnerXml + "</span></p>";
                         pXnOut.InnerXml += "<p><b>" + xn.InnerXml + "</b></p>";
-                    }
                     else
-                    {
-                        //pXnOut.InnerXml += "<p><span>" + xn.InnerXml + "</span></p>";
                         pXnOut.InnerXml += "<p>" + xn.InnerXml + "</p>";
-                    }
                     if ((xn.NextSibling != null) && xn.NextSibling.Name.Equals("br"))
                         pXnOut.InnerXml += "<p/>";
                 }
@@ -1075,6 +1050,9 @@ namespace DataMiningCourts
 			string sVysledek;
 			XmlNode xn = pD.SelectSingleNode("/*/judikatura-section/header-j/info4xml/item");
 			if (xn == null)
+				return;
+			string sInfo4Vyrok = xn.InnerText.ToLower().TrimStart();
+			if (sInfo4Vyrok.StartsWith("procesní"))
 				return;
 			if (xn.InnerText.ToLower().Contains("vyhověno"))
 				sVysledek = "Zrušeno";

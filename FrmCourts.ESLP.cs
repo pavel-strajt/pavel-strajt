@@ -120,7 +120,7 @@ namespace DataMiningCourts
 
         private void ESLP_bgLoadData_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            FinalizeLogs();
+            FinalizeLogs(false);
         }
 
         private void ESLP_browser_DocumentCompleted(object sender, WebBrowserDocumentCompletedEventArgs e)

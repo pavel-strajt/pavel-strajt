@@ -200,12 +200,12 @@ namespace DataMiningCourts
 								{
 									imgNode.ParentNode.RemoveChild(imgNode);
 								}
-								var castkaNode = dOut.DocumentElement.SelectSingleNode("//hlavicka-vestnik/castka");
+								var castkaNode = dOut.DocumentElement.SelectSingleNode("./hlavicka-vestnik/castka");
 								if (castkaNode != null)
 								{
 									castkaNode.InnerText = cisloUsneseni + "/" + datum.Year;
 								}
-								var titulNode = dOut.DocumentElement.SelectSingleNode("//hlavicka-vestnik/titul");
+								var titulNode = dOut.DocumentElement.SelectSingleNode("./hlavicka-vestnik/titul");
 								if (titulNode != null)
 								{
 									var pNodes = htmlTextNode.SelectNodes("//p");
@@ -285,11 +285,12 @@ namespace DataMiningCourts
         {
             try
             {
+				long lSize = 0;
                 var request = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url);
-                var response = (System.Net.HttpWebResponse)request.GetResponse();
-                response.Close();
+				System.Net.WebResponse response = (System.Net.HttpWebResponse)request.GetResponse();
+				lSize = response.ContentLength;
+				response.Close();
 
-                var iSize = response.ContentLength;
                 var iRunningByteTotal = 0;
                 using (System.Net.WebClient client = new System.Net.WebClient())
                 {
@@ -298,7 +299,7 @@ namespace DataMiningCourts
                         using (Stream streamLocal = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
                         {
                             int iByteSize = 0;
-                            byte[] byteBuffer = new byte[iSize];
+                            byte[] byteBuffer = new byte[lSize];
                             while ((iByteSize = streamRemote.Read(byteBuffer, 0, byteBuffer.Length)) > 0)
                             {
                                 streamLocal.Write(byteBuffer, 0, iByteSize);

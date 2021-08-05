@@ -167,10 +167,9 @@ namespace DataMiningCourts
         public void ZalozDokument(NS_WebHeader hlavi, SqlConnection pConn)
         {
             WHeader = hlavi;
-            string judikaturaSectionDokumentName;
             /* Kombinace "J", Spisové značky a roku z data rozhodnutí */
-            if (!Utility.CreateDocumentName("J", WHeader.SpisovaZnacka, WHeader.HDate.Year.ToString(), out documentName) ||
-                !Utility.CreateDocumentName("J", WHeader.Citation, WHeader.HDate.Year.ToString(), out judikaturaSectionDokumentName))
+            if (!Utility.CreateDocumentName("J", WHeader.SpisovaZnacka, WHeader.HDate.Year.ToString(), out this.documentName) ||
+                !Utility.CreateDocumentName("J", WHeader.Citation, WHeader.HDate.Year.ToString(), out string judikaturaSectionDokumentName))
             {
                 throw new NS_Exception(String.Format("{0}: Document name nebylo vygenerováno!", WHeader.SpisovaZnacka));
             }
@@ -267,7 +266,7 @@ namespace DataMiningCourts
 			
 
 			/* Smazání případných prázdných uzlů hlavičky */
-			UtilityXml.DeleteEmptyNodesFromHeaders(CistyVyber);
+			UtilityXml.RemoveEmptyElementsFromHeader(ref CistyVyber);
             CistyVyber.Save(PathXml);
         }
 

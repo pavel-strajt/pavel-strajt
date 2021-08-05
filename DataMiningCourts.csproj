@@ -93,6 +93,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CiselnikDB.cs" />
+    <Compile Include="FrmCourts.ESO.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmCourts.Justice.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="FrmCourts.VS.cs">
       <SubType>Form</SubType>
     </Compile>

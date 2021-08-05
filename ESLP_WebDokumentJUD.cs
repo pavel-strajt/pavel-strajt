@@ -120,10 +120,9 @@ namespace DataMiningCourts
         public void ZalozDokument(ESLP_WebHeader hlavi)
         {
             WHeader = hlavi;
-            string judikaturaSectionDokumentName;
             /* Kombinace "J", Spisové značky a roku z data rozhodnutí */
-            if (!Utility.CreateDocumentName("J", WHeader.CisloStiznosti, WHeader.DatumRozhodnutiDate.Year.ToString(), out documentName) ||
-                !Utility.CreateDocumentName("J", WHeader.Citace, WHeader.DatumRozhodnutiDate.Year.ToString(), out judikaturaSectionDokumentName))
+            if (!Utility.CreateDocumentName("J", WHeader.CisloStiznosti, WHeader.DatumRozhodnutiDate.Year.ToString(), out this.documentName) ||
+                !Utility.CreateDocumentName("J", WHeader.Citace, WHeader.DatumRozhodnutiDate.Year.ToString(), out string judikaturaSectionDokumentName))
             {
                 throw new ApplicationException(String.Format("{0}: Document name nebylo vygenerováno!", WHeader.CisloStiznosti));
             }
@@ -183,7 +182,7 @@ namespace DataMiningCourts
             }
 
             /* Smazání případných prázdných uzlů hlavičky */
-            UtilityXml.DeleteEmptyNodesFromHeaders(CistyVyber);
+            UtilityXml.RemoveEmptyElementsFromHeader(ref CistyVyber);
             CistyVyber.Save(PathXml);
         }
 

@@ -266,7 +266,7 @@ namespace DataMiningCourts
                 UtilityXml.AddCite(dOut, sDocumentName, conn);
 #endif
                 /* Odstraním prázdné části z hlavičky! */
-                UtilityBeck.UtilityXml.DeleteEmptyNodesFromHeaders(dOut);
+                UtilityBeck.UtilityXml.RemoveEmptyElementsFromHeader(ref dOut);
                 // uložení
                 dOut.Save(sPathResultXml);
 #if !DUMMY_DB
@@ -290,8 +290,9 @@ namespace DataMiningCourts
         {
             XmlDocument dIn = new XmlDocument(), dOut = new XmlDocument();
             string sReferenceNumber = null, zeDne = null, sValue, druh = null;
-            // string text1 = "", text2;
-            XmlNode xn, xnTr, xnTd1, xnTd2, xnTable, xn2;
+			DateTime? dtZeDne = null;
+			// string text1 = "", text2;
+			XmlNode xn, xnTr, xnTd1, xnTd2, xnTable, xn2;
             Object oResult = null;
             int iPosition;
             var zeDneNonUni = String.Empty;
@@ -344,7 +345,7 @@ namespace DataMiningCourts
                     case "Právní věta:":
                         if (!String.IsNullOrWhiteSpace(xnTd2.InnerText))
                         {
-                            xn = dOut.SelectSingleNode("//veta");
+                            xn = dOut.SelectSingleNode("/*/judikatura-section/header-j/veta");
                             sValue = xnTd2.InnerText.Trim();
                             sValue = sValue.Replace('\r', ' ');
                             sValue = sValue.Replace('\n', ' ');
@@ -370,7 +371,7 @@ namespace DataMiningCourts
                         break;
                     case "Datum rozhodnutí:":		// Ze dne
                         zeDneNonUni = xnTd2.InnerText.Trim();
-                        zeDne = Utility.ConvertDateIntoUniversalFormat(zeDneNonUni);
+                        zeDne = Utility.ConvertDateIntoUniversalFormat(zeDneNonUni, out dtZeDne);
                         xn = dOut.SelectSingleNode("//datschvaleni");
                         xn.InnerText = zeDne;
                         break;
@@ -399,7 +400,7 @@ namespace DataMiningCourts
                                     {
                                         sValue = xn2.InnerText.Trim();
 #if !DUMMY_DB
-                                        cmd.CommandText = "SELECT 1 FROM TRegister WHERE TRegisterName='" + sValue + "' AND TRegisterJ=1";
+                                        cmd.CommandText = "SELECT 1 FROM TRegister WHERE TRegisterName='" + sValue + "'";
                                         oResult = cmd.ExecuteScalar();
 #endif
                                         if (oResult != null)
@@ -467,8 +468,7 @@ namespace DataMiningCourts
             }
 
             // doplnění čísla sešitu
-            DateTime zeDneDateTime = DateTime.Parse(zeDne);
-            if (citation.ReferenceNumberIsAlreadyinDb(zeDneDateTime, sReferenceNumber))
+            if (citation.ReferenceNumberIsAlreadyinDb(dtZeDne.Value, sReferenceNumber))
             {
                 /*+ForeignId*/
                 pError = String.Format("Znacka [{0}] s daným datem rozhodnutí [{1}] je v jiz databazi!", sReferenceNumber, zeDne);
@@ -479,38 +479,27 @@ namespace DataMiningCourts
             xn.InnerText = this.sFilePathToWriteFileTo;
             // fill in citation
             xn = dOut.DocumentElement.SelectSingleNode("./judikatura-section/header-j/citace");
-            int iNumberInCitation = citation.GetNextCitation(zeDneDateTime.Year);
+            int iNumberInCitation = citation.GetNextCitation(dtZeDne.Value.Year);
 
-            string sCitation = String.Format("Výběr VKS {0}/{1}", iNumberInCitation, zeDneDateTime.Year);
+            string sCitation = String.Format("Výběr VKS {0}/{1}", iNumberInCitation, dtZeDne.Value.Year);
             xn.InnerText = sCitation;
-            // odstranění prázdných elementů z hlavičky; potřebuju dva ukazatele
-            xn = dOut.DocumentElement.FirstChild.FirstChild;
-            while (xn != null)
-            {
-                if (String.IsNullOrWhiteSpace(xn.InnerText))
-                {
-                    xn2 = xn.NextSibling;
-                    xn.ParentNode.RemoveChild(xn);
-                    xn = xn2;
-                    continue;
-                }
-                xn = xn.NextSibling;
-            }
+			// odstranění prázdných elementů z hlavičky
+			UtilityXml.RemoveEmptyElementsFromHeader(ref dOut);
 
-            // vytvoření složky výsledného xml
-            string judikaturaSectionDokumentName;
-            if (!Utility.CreateDocumentName("J", sReferenceNumber, zeDneDateTime.Year.ToString(), out pDocumentName) ||
-                !Utility.CreateDocumentName("J", sCitation, zeDneDateTime.Year.ToString(), out judikaturaSectionDokumentName))
+			// vytvoření složky výsledného xml
+			string judikaturaSectionDokumentName;
+            if (!Utility.CreateDocumentName("J", sReferenceNumber, dtZeDne.Value.Year.ToString(), out pDocumentName) ||
+                !Utility.CreateDocumentName("J", sCitation, dtZeDne.Value.Year.ToString(), out judikaturaSectionDokumentName))
             {
                 pError = "Nevytvořen název dokumentu !";
-                citation.RevertCitationForAYear(zeDneDateTime.Year);
+                citation.RevertCitationForAYear(dtZeDne.Value.Year);
                 return false;
             }
 
             if (Directory.Exists(directoryPathToWriteFileTo + "\\" + pDocumentName))
             {
                 pError = "Výstupní dokument již existuje !";
-                citation.RevertCitationForAYear(zeDneDateTime.Year);
+                citation.RevertCitationForAYear(dtZeDne.Value.Year);
                 return false;
             }
 
@@ -520,10 +509,10 @@ namespace DataMiningCourts
             judikaturaSection.Attributes["id-block"].Value = judikaturaSectionDokumentName;
             dOut.DocumentElement.Attributes["DokumentName"].Value = pDocumentName;
 
-            UtilityBeck.UtilityXml.DeleteEmptyNodesFromHeaders(dOut);
+            UtilityBeck.UtilityXml.RemoveEmptyElementsFromHeader(ref dOut);
 
             dOut.Save(directoryPathToWriteFileTo + "\\" + pDocumentName + "\\" + pDocumentName + ".xml");
-            citation.CommitCitationForAYear(zeDneDateTime.Year);
+            citation.CommitCitationForAYear(dtZeDne.Value.Year);
             return true;
         }
     }

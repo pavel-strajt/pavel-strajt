@@ -79,7 +79,6 @@ namespace DataMiningCourts
 				using (SqlConnection conn = new SqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings["SlovLex"].ConnectionString))
 				{
 					conn.Open();
-					string sError;
 					for (int i = 0; i < nodes.Count; i++)
 					{
 						++this.aktualneZpracovavanyDokument;
@@ -87,7 +86,7 @@ namespace DataMiningCourts
 							this.processedBar.BeginInvoke(UpdateProgress, new object[] { true });
 						else
 							this.processedBar.BeginInvoke(UpdateProgress, new object[] { false });
-						CreateDocument(conn, nodes[i], out sError);
+						CreateDocument(conn, nodes[i], out string sError);
 					}
 					conn.Close();
 				}
@@ -121,7 +120,10 @@ namespace DataMiningCourts
 				this.btnMineDocuments.Enabled = true;
 				this.USSK_btnWordToXml.Enabled = true;
 				this.processedBar.Value = 0;
+				if (this.dbConnection.State == System.Data.ConnectionState.Open)
+					this.dbConnection.Close();
 				this.tcCourts.Enabled = true;
+				FinalizeLogs(false);
 			}
 		}
 
@@ -290,7 +292,7 @@ namespace DataMiningCourts
 					sDocumentName = Path.GetFileNameWithoutExtension(files[i]);
 					GenerateOneDocument(files[i], sDocumentName);
 				}
-				this.FinalizeLogs();
+				this.FinalizeLogs(false);
 			});
 		}
 
@@ -449,7 +451,7 @@ namespace DataMiningCourts
 						{
 							XmlNode xnDateApproval = pD.DocumentElement.FirstChild.SelectSingleNode("./datschvaleni");
 							string s = rgInfo.Match(pXn.InnerText).Groups["date1"].Value;
-							xnDateApproval.InnerText = UtilityBeck.Utility.ConvertLongDateIntoUniversalDate(s);
+							xnDateApproval.InnerText = UtilityBeck.Utility.ConvertDateIntoUniversalFormat(s, out DateTime? dt);
 							pNumberOfProcessed = 21;
 							return;
 						}

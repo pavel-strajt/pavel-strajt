@@ -186,8 +186,13 @@ namespace DataMiningCourts
         /// <summary>
         /// This function close log file and in the case, that in was written into log file something, it enables users to show the content of the log file
         /// </summary>
-        private void FinalizeLogs()
+        private void FinalizeLogs(bool pNoDocuments)
         {
+            if (pNoDocuments)
+            {
+                MessageBox.Show(this, "Nebyly nalezeny žádné dokumenty.", "Stahování", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
             //TODO: overit existenci souboru pred zobrazenim
 
@@ -245,14 +250,15 @@ namespace DataMiningCourts
             Microsoft.Win32.RegistryKey rgKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey("Software\\DataMiningCourts");
             this.txtWorkingFolder.Text = (string)rgKey.GetValue("FolderWork", "C:");
             this.txtOutputFolder.Text = (string)rgKey.GetValue("FolderOutput", "C:");
+            this.tcCourts.SelectedIndex = (int)rgKey.GetValue("SelectedCourt", 0);
             rgKey.Close();
             this.NS_dtpDateFrom.Value = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             this.US_dtpDateFrom.Value = this.NS_dtpDateFrom.Value;
             this.NSS_dtpDateFrom.Value = this.NS_dtpDateFrom.Value;
             this.SNI_dtpDateFrom.Value = this.NS_dtpDateFrom.Value;
+            this.dtpDateEsoFrom.Value = this.NS_dtpDateFrom.Value;
             this.dbConnection = new SqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings["LexData"].ConnectionString);
 
-            this.tcCourts.SelectedIndex = 1;
             this.tcCourts_SelectedIndexChanged(null, null);
 
             // Zachycení všech možných vyjímek...
@@ -415,6 +421,16 @@ namespace DataMiningCourts
 
                 this.webBrowserHandler += new WebBrowserDocumentCompletedEventHandler(this.VS_browser_DocumentCompleted);
             }
+            else if (tcCourts.SelectedTab == tpEso)
+            {
+                this.startAction += new DoStartCrawl(this.ESO_Click);
+                this.webBrowserHandler += new WebBrowserDocumentCompletedEventHandler(this.ESO_browser_DocumentCompleted);
+            }
+            if (tcCourts.SelectedTab == tpJustice)
+            {
+                startAction += new DoStartCrawl(this.Justice_Click);
+                //webBrowserHandler += new WebBrowserDocumentCompletedEventHandler(this.JUSTICE_browser_DocumentCompleted);
+            }
         }
 
         private void downloadPageLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
@@ -466,6 +482,12 @@ namespace DataMiningCourts
                 {
                     link = VS_INDEX;
                 }
+                else if (tcCourts.SelectedTab == tpEso)
+                    link = ESO_INDEX;
+                else if (tcCourts.SelectedTab == tpJustice)
+                {
+                    link = JUSTICE_INDEX;
+                }
 
                 if (!string.IsNullOrWhiteSpace(link))
                 {
@@ -501,6 +523,7 @@ namespace DataMiningCourts
             Microsoft.Win32.RegistryKey rgKey = Microsoft.Win32.Registry.CurrentUser.CreateSubKey("Software\\DataMiningCourts");
             rgKey.SetValue("FolderWork", this.txtWorkingFolder.Text);
             rgKey.SetValue("FolderOutput", this.txtOutputFolder.Text);
+            rgKey.SetValue("SelectedCourt", this.tcCourts.SelectedIndex);
             rgKey.Close();
             if (this.dbConnection.State == System.Data.ConnectionState.Open)
                 this.dbConnection.Close();
@@ -660,7 +683,7 @@ namespace DataMiningCourts
             return s;
         }
 
-        public static void AddLawArea(SqlConnection pConn, XmlNode pXnHeader)
+        public static void AddLawArea(SqlConnection pConn, XmlNode pXnHeader, bool pNejvyssiSoud)
         {
             XmlNode xn;
             List<string> lLawAreas = new List<string>();
@@ -744,24 +767,27 @@ namespace DataMiningCourts
                     }
                 }
             }
-            Regex rg = new Regex(@"\sTdo?\s");
-            xn = pXnHeader.SelectSingleNode("./citace");
-            //if (rg.IsMatch(hlavi.SpisovaZnacka))
-            if (rg.IsMatch(xn.InnerText))
+            if (pNejvyssiSoud)
             {
-                if (!lLawAreas.Contains("Trestní právo"))
-                    lLawAreas.Add("Trestní právo");
-            }
-            else if (xn.InnerText.Contains("MSPH") || xn.InnerText.Contains("KSPH") || xn.InnerText.Contains("KSCB")
-                || xn.InnerText.Contains("KSTB") || xn.InnerText.Contains("KSPL") || xn.InnerText.Contains("KSKV")
-                || xn.InnerText.Contains("KSUL") || xn.InnerText.Contains("KSLB") || xn.InnerText.Contains("KSHK")
-                || xn.InnerText.Contains("KSPA") || xn.InnerText.Contains("KSBR") || xn.InnerText.Contains("KSJI")
-                || xn.InnerText.Contains("KSZL") || xn.InnerText.Contains("KSOS") || xn.InnerText.Contains("KSOL")
-                || xn.InnerText.Contains("VSPH") || xn.InnerText.Contains("VSOL") || xn.InnerText.Contains("NSCR")
-                || xn.InnerText.Contains("NSČR") || xn.InnerText.Contains("ICdo"))
-            {
-                if (!lLawAreas.Contains("Insolvenční právo"))
-                    lLawAreas.Add("Insolvenční právo");
+                Regex rg = new Regex(@"\sTdo?\s");
+                xn = pXnHeader.SelectSingleNode("./citace");
+                //if (rg.IsMatch(hlavi.SpisovaZnacka))
+                if (rg.IsMatch(xn.InnerText))
+                {
+                    if (!lLawAreas.Contains("Trestní právo"))
+                        lLawAreas.Add("Trestní právo");
+                }
+                else if (xn.InnerText.Contains("MSPH") || xn.InnerText.Contains("KSPH") || xn.InnerText.Contains("KSCB")
+                            || xn.InnerText.Contains("KSTB") || xn.InnerText.Contains("KSPL") || xn.InnerText.Contains("KSKV")
+                            || xn.InnerText.Contains("KSUL") || xn.InnerText.Contains("KSLB") || xn.InnerText.Contains("KSHK")
+                            || xn.InnerText.Contains("KSPA") || xn.InnerText.Contains("KSBR") || xn.InnerText.Contains("KSJI")
+                            || xn.InnerText.Contains("KSZL") || xn.InnerText.Contains("KSOS") || xn.InnerText.Contains("KSOL")
+                            || xn.InnerText.Contains("VSPH") || xn.InnerText.Contains("VSOL") || xn.InnerText.Contains("NSCR")
+                            || xn.InnerText.Contains("NSČR") || xn.InnerText.Contains("ICdo"))
+                {
+                    if (!lLawAreas.Contains("Insolvenční právo"))
+                        lLawAreas.Add("Insolvenční právo");
+                }
             }
             if (lLawAreas.Count > 0)
             {

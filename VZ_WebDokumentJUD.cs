@@ -142,9 +142,6 @@ namespace DataMiningCourts
 					UtilityXml.InsertElementInAlphabeticalOrder(CistyVyber.DocumentElement.FirstChild, el);
 				}
             }
-
-            /* Smazání případných prázdných uzlů hlavičky */
-            UtilityXml.DeleteEmptyNodesFromHeaders(CistyVyber);
             CistyVyber.Save(PathResultXml);
         }
     }

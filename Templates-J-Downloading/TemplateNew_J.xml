@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="\\Appsv\Programy\Xslt\Preview.xslt"?>
+<judikatura DokumentName="" quality="4" VersionLink="0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="file://Appsv/Programy/Xsd/Beck-praha-general.xsd">
+	<hlavicka-judikatura>
+		<autor>
+			<item></item>
+		</autor>
+		<citace></citace>
+		<datschvaleni></datschvaleni>
+		<druh></druh>
+		<lawarea></lawarea>
+		<module></module>
+		<rejstrik></rejstrik>
+		<souvisi_eu></souvisi_eu>
+		<titul></titul>
+		<zakladnipredpis></zakladnipredpis>
+	</hlavicka-judikatura>
+	<judikatura-section id-block="js1" quality="1">
+		<header-j>
+			<autorliteratura></autorliteratura>
+			<casopis></casopis>
+			<castka></castka>
+			<citace></citace>
+			<datvydani></datvydani>
+			<ecli></ecli>
+			<id-external></id-external>
+			<info3></info3>
+			<isauthornote></isauthornote>
+			<issentence-intext></issentence-intext>
+			<kategorie></kategorie>
+			<rejstrik2></rejstrik2>
+			<strana></strana>
+			<titul></titul>
+			<veta></veta>
+			<vydavatel></vydavatel>
+		</header-j>
+		<html-text>
+			<p/>
+		</html-text>
+	</judikatura-section>
+</judikatura>

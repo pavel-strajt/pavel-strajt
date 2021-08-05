@@ -91,7 +91,7 @@ namespace DataMiningCourts
                     bgLoadingData.ReportProgress(percentageProgress);
                 }
             }
-            FinalizeLogs();
+            FinalizeLogs(false);
             bgLoadingData.ReportProgress(100);
         }
 

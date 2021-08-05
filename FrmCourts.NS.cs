@@ -104,7 +104,7 @@ namespace DataMiningCourts
             else
             {
                 /* aktuální >= maximální => projel jsem všechna data */
-                FinalizeLogs();
+                FinalizeLogs(false);
             }
         }
 

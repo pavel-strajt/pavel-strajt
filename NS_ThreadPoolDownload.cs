@@ -296,7 +296,7 @@ namespace DataMiningCourts
                     {
                         this.parentWindowForm.WriteIntoLogCritical(ex.Message);
                     }
-					FrmCourts.AddLawArea(conn, dOut.DocumentElement.FirstChild);
+					FrmCourts.AddLawArea(conn, dOut.DocumentElement.FirstChild, true);
 
                     UtilityXml.RemoveRedundantEmptyRowsInXmlDocument(ref xnDocumentText);
                     dOut.Save(dokJUD.PathXml);

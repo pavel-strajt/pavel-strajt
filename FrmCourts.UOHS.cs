@@ -301,15 +301,14 @@ namespace DataMiningCourts
                     case "Datum nabytí právní moci":
                         // Vyzvednu datum, smažu z něj pevné mezery
                         string datumNPM = hnDecisionParametr.SelectSingleNode("./td").InnerText;
-						string dateApprovalUniFormat = UtilityBeck.Utility.ConvertDateIntoUniversalFormat(datumNPM);
+						string dateApprovalUniFormat = UtilityBeck.Utility.ConvertDateIntoUniversalFormat(datumNPM, out DateTime? dApproval);
 						pOutput.DocumentElement.SelectSingleNode("//datschvaleni").InnerText = dateApprovalUniFormat;
-						DateTime dApproval = DateTime.Parse(dateApprovalUniFormat);
                         /* Navíc provedu kontrolu toho, jestli se už daná spisová značka nenachází v DB*/
 						/* Zkontroluji, zda-li už takové číslo jednací nemám v DB; Pokud ano, dále nezpracovávám */
 						
-						if (UOHS_citationService.ReferenceNumberIsAlreadyinDb(dApproval, sReferenceNumber))
+						if (UOHS_citationService.ReferenceNumberIsAlreadyinDb(dApproval.Value, sReferenceNumber))
 						{
-							WriteIntoLogDuplicity(String.Format("Znacka [{0}] s daným datem rozhodnutí [{1}] je v jiz databazi!", sReferenceNumber, dApproval.ToShortDateString()));
+							WriteIntoLogDuplicity(String.Format("Znacka [{0}] s daným datem rozhodnutí [{1}] je v jiz databazi!", sReferenceNumber, dApproval.Value.ToShortDateString()));
 							// dokument již máme
 							return String.Empty;
 						}
@@ -696,8 +695,7 @@ namespace DataMiningCourts
 						int iYear = Int32.Parse(citace.Substring(idx + 1));
 
                         // Nastavím DokumentName
-                        string judikaturaSectionDokumentName;
-                        UtilityBeck.Utility.CreateDocumentName("J", citace, iYear.ToString(), out judikaturaSectionDokumentName);
+                        UtilityBeck.Utility.CreateDocumentName("J", citace, iYear.ToString(), out string judikaturaSectionDokumentName);
                         XmlNode judikaturaSection = newXmlDocument.SelectSingleNode("//judikatura-section");
                         judikaturaSection.Attributes["id-block"].Value = judikaturaSectionDokumentName;
                         newXmlDocument.DocumentElement.Attributes["DokumentName"].Value = sDocumentName;
@@ -719,7 +717,7 @@ namespace DataMiningCourts
 
                         Directory.CreateDirectory(sFullPathToResultFolder);
                         /* Odstraním prázdné části z hlavičky! */
-                        UtilityBeck.UtilityXml.DeleteEmptyNodesFromHeaders(newXmlDocument);
+                        UtilityBeck.UtilityXml.RemoveEmptyElementsFromHeader(ref newXmlDocument);
                         newXmlDocument.Save(sFullPathToResultFile);
 
                         string sPathWordXml = String.Format(@"{0}\W_{1}-0.xml", sFullPathToResultFolder, sDocumentName);
@@ -754,7 +752,7 @@ namespace DataMiningCourts
 
                 /* Hotovo*/
                 this.processedBar.BeginInvoke(UpdateProgress, new object[] { true });
-				FinalizeLogs();
+				FinalizeLogs(false);
             });
         }
 

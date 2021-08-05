@@ -519,7 +519,7 @@ namespace DataMiningCourts
 
                 /* Update progress => Konec */
                 INS_UpdateDownloadProgressSafe(true);
-                FinalizeLogs();
+                FinalizeLogs(false);
             }
         }
 

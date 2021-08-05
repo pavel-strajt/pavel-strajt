@@ -344,7 +344,7 @@ namespace DataMiningCourts
             {
 				xDocAfterExport.Load(sFullPathToResultFile);
                 /* Nodes from header, which has an empty InnerText */
-                UtilityBeck.UtilityXml.DeleteEmptyNodesFromHeaders(xDocAfterExport);
+                UtilityBeck.UtilityXml.RemoveEmptyElementsFromHeader(ref xDocAfterExport);
                 /* Nodes from document named "span", which has an empty InnerText (They would cause validation issues) */
                 UtilityBeck.UtilityXml.DeleteEmptyNodesByName(xDocAfterExport, "span");
 
@@ -670,9 +670,8 @@ namespace DataMiningCourts
             /* Datum rozhodnutí  	    =>  datschvaleni */
             XmlNode xnDateApproval = newXmlDocument.DocumentElement.SelectSingleNode("//datschvaleni");
             string sDateApprovalNonUni = tds[1].InnerText.Trim().ClearStringFromSpecialHtmlChars();
-            string sDateApprovalUni = UtilityBeck.Utility.ConvertDateIntoUniversalFormat(sDateApprovalNonUni);
+            string sDateApprovalUni = UtilityBeck.Utility.ConvertDateIntoUniversalFormat(sDateApprovalNonUni, out DateTime? dateApproval);
             xnDateApproval.InnerText = sDateApprovalUni;
-            DateTime dateApproval = DateTime.Parse(sDateApprovalUni);
 
             /* Značka spisu případu  	=>  citace */
             XmlNode xnReferenceNumber = newXmlDocument.DocumentElement.FirstChild.SelectSingleNode("./citace");
@@ -680,9 +679,9 @@ namespace DataMiningCourts
             xnReferenceNumber.InnerText = referenceNumberText;
 
             /* Check for the duplicities */
-            if (this.csCitationService.IsAlreadyinDb(dateApproval, referenceNumberText, string.Empty))
+            if (this.csCitationService.IsAlreadyinDb(dateApproval.Value, referenceNumberText, string.Empty))
             {
-                WriteIntoLogDuplicity(String.Format("Značka [{0}] s daným datem rozhodnutí [{1}] je v jiz databazi!", referenceNumberText, dateApproval.ToShortDateString()));
+                WriteIntoLogDuplicity(String.Format("Značka [{0}] s daným datem rozhodnutí [{1}] je v jiz databazi!", referenceNumberText, dateApproval.Value.ToShortDateString()));
                 /* Document already exists -> Skip the document */
                 return null;
             }
@@ -897,7 +896,7 @@ namespace DataMiningCourts
 
                 this.Invoke((MethodInvoker)(() =>
                 {
-                    FinalizeLogs();
+                    FinalizeLogs(false);
 
                     this.btnMineDocuments.Enabled = true;
                     this.UPV_dtFrom.Enabled = true;

@@ -99,7 +99,7 @@ namespace DataMiningCourts
 
         private void VZ_bgLoadData_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            FinalizeLogs();
+            FinalizeLogs(false);
         }
 
         private void VZ_browser_DocumentCompleted(object sender, WebBrowserDocumentCompletedEventArgs e)

@@ -138,18 +138,18 @@
 2) Po načtení všech dokumentů spusťe program pro převod pdf-&gt;doc
 3) Po převedení všech pdf na doc stiskněte tlačítko doc-&gt;xml</value>
   </data>
-  <data name="INS_TextInfo.Text" xml:space="preserve">
-    <value>Pracovní postup:
-1) Vyberte rozsah dat pro stažení a stiskněte "načíst dokumenty"
-2) Po načtení všech dokumentů spusťe program pro převod pdf-&gt;doc
-3) Po převedení všech pdf na doc stiskněte tlačítko doc-&gt;xml</value>
-  </data>
   <data name="textBox2.Text" xml:space="preserve">
     <value>Pracovní postup:
 1) Stránku se seznamem dokumentů uložte jako úplný soubor html
 2) Stiskněte tlačítko Načíst dokumenty
 3) Převeďte všechny pdf soubory do Wordu
 4) Stiskněte tlačítko doc-&gt;xml pro vygenerování výsledných xml dokumentů</value>
+  </data>
+  <data name="INS_TextInfo.Text" xml:space="preserve">
+    <value>Pracovní postup:
+1) Vyberte rozsah dat pro stažení a stiskněte "načíst dokumenty"
+2) Po načtení všech dokumentů spusťe program pro převod pdf-&gt;doc
+3) Po převedení všech pdf na doc stiskněte tlačítko doc-&gt;xml</value>
   </data>
   <metadata name="bgLoadingData.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>17, 17</value>

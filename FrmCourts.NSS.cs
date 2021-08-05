@@ -194,7 +194,7 @@ namespace DataMiningCourts
                                 newXmlDocument.Load(@"Templates-J-Downloading\Template_J_NSS.xml");
 #else
 								string sPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-								newXmlDocument.Load(Path.Combine(sPath, @"Templates-J-Downloading\Template_J_NSS.xml"));
+								newXmlDocument.Load(Path.Combine(sPath, @"Templates\TemplateNew_J.xml"));
 #endif
 								// sloupce v "tabulce" jsou následující:
 								//CHECK BOX, Spis.značka Forma/Způsob rozhodnutí Soud Datum rozhodnutí Publikováno ve Sb. NSS Účastníci řízení Opravný prostředek a výsledek řízení o něm Prejudikatura Populární název
@@ -203,19 +203,19 @@ namespace DataMiningCourts
 								HtmlAgilityPack.HtmlNode nodeOdkazDetail = nodeSpZn.SelectSingleNode(".//img[@title='Informace o řízení']");
 								Match NSS_matchOdkazNaDetail = NSS_regOdkazNaDetail.Match(nodeOdkazDetail.Attributes["onclick"].Value);
 
-								XmlNode xn = newXmlDocument.SelectSingleNode("//id-external");
+								XmlNode xn = newXmlDocument.SelectSingleNode("/*/judikatura-section/header-j/id-external");
 								xn.InnerText = NSS_matchOdkazNaDetail.Groups[1].Value;
 
 								/* Check for duplicities */
 								spzn = nodeSpZn.InnerText.Trim();
 								datSchvaleniNonUni = data.ChildNodes[NSS_DETAIL_DATUM_SCHVALENI_NODE].InnerText.Trim();
-								DateTime datSchvaleniDateTime = DateTime.Parse(UtilityBeck.Utility.ConvertDateIntoUniversalFormat(datSchvaleniNonUni));
+								UtilityBeck.Utility.ConvertDateIntoUniversalFormat(datSchvaleniNonUni, out DateTime? datSchvaleniDateTime);
 								// pokud již existuje, tak nic
 								//if (NSS_citationService.IsAlreadyinDb(datSchvaleniDateTime, spzn, xn.InnerText))
 								// nebudeme kontrolovat podle jejich ID - nespolehlivé
-								if (NSS_citationService.IsAlreadyinDb(datSchvaleniDateTime, spzn, null))
+								if (NSS_citationService.IsAlreadyinDb(datSchvaleniDateTime.Value, spzn, null))
 								{
-									WriteIntoLogDuplicity(String.Format("Značka [{0}] s daným datem rozhodnutí [{1}] je v jiz databazi!", spzn, datSchvaleniDateTime.ToShortDateString()));
+									WriteIntoLogDuplicity(String.Format("Značka [{0}] s daným datem rozhodnutí [{1}] je v jiz databazi!", spzn, datSchvaleniDateTime.Value.ToShortDateString()));
 									// z tohohle mraku nezaprší... (není přidělena spisová značka)
 									++NSS_PDF_aktualniZaznamKeZpracovani;
 									++NSS_XML_aktualniZaznamKeZpracovani;
@@ -256,9 +256,9 @@ namespace DataMiningCourts
 
 								newXmlDocument.DocumentElement.FirstChild.SelectSingleNode("./citace").InnerText = spzn;
 								// forma/způsob rozhodnutí = druh
-								newXmlDocument.DocumentElement.SelectSingleNode("//druh").InnerText = data.ChildNodes[NSS_DETAIL_DRUH_NODE].FirstChild.InnerText.Trim();
+								newXmlDocument.DocumentElement.FirstChild.SelectSingleNode("./druh").InnerText = data.ChildNodes[NSS_DETAIL_DRUH_NODE].FirstChild.InnerText.Trim();
 								// autor/item
-								XmlNode xnAuthor = newXmlDocument.DocumentElement.SelectSingleNode("//autor/item");
+								XmlNode xnAuthor = newXmlDocument.DocumentElement.FirstChild.SelectSingleNode("./autor/item");
 								string sAuthor = data.ChildNodes[NSS_DETAIL_AUTHOR_NODE].InnerText.Trim();
 								if (spzn.Contains("Konf"))
 									sAuthor = "Zvláštní senát zřízený podle zákona č. 131/2002 Sb.";
@@ -279,13 +279,13 @@ namespace DataMiningCourts
 								}
 								xnAuthor.InnerText = sAuthor;
 								// datschvaleni RRRR-MM-DD
-								string datSchvaleni = Utility.ConvertDateIntoUniversalFormat(datSchvaleniNonUni);
-								newXmlDocument.DocumentElement.SelectSingleNode("//datschvaleni").InnerText = datSchvaleni;
+								string datSchvaleni = Utility.ConvertDateIntoUniversalFormat(datSchvaleniNonUni, out DateTime? dt);
+								newXmlDocument.DocumentElement.FirstChild.SelectSingleNode("./datschvaleni").InnerText = datSchvaleni;
 								//string rokSchvaleni = datSchvaleni.Substring(0, 4);
 								// právní věta
 								if (!String.IsNullOrEmpty(sIdVeta))
 								{
-									newXmlDocument.DocumentElement.SelectSingleNode("//issentence-intext").InnerText = sIdVeta;
+									newXmlDocument.SelectSingleNode("/*/judikatura-section/header-j/issentence-intext").InnerText = sIdVeta;
 								}
 #if !DUMMY_DB
 								// info = <!-- prejudikatura - oddělit entery -->
@@ -302,7 +302,7 @@ namespace DataMiningCourts
 									}
 								}
 								if (!String.IsNullOrEmpty(sbPrejudikatura.ToString()))
-									newXmlDocument.DocumentElement.SelectSingleNode("//prejudikatura").InnerXml = sbPrejudikatura.ToString();
+									newXmlDocument.SelectSingleNode("/*/judikatura-section/header-j/prejudikatura").InnerXml = sbPrejudikatura.ToString();
 #endif
 
 								// populární název = titul
@@ -387,7 +387,7 @@ namespace DataMiningCourts
 					{
 						clientHeaderDownload.Encoding = Encoding.UTF8;
 						// zkusím stáhnout právní větu
-						XmlNode xn = data.DocumentElement.SelectSingleNode("//issentence-intext");
+						XmlNode xn = data.SelectSingleNode("/*/judikatura-section/header-j/issentence-intext");
 						if (!String.IsNullOrEmpty(xn.InnerText))
 						{
 							urlToDownload = String.Format("{0}{1}", NSS_VETA_ROZHODNUTI, xn.InnerText);
@@ -396,7 +396,7 @@ namespace DataMiningCourts
 							{
 								vetaDoc.LoadHtml(clientHeaderDownload.DownloadString(urlToDownload));
 								xn.InnerText = "1";
-								xn = data.DocumentElement.FirstChild.SelectSingleNode("//veta");
+								xn = data.SelectSingleNode("/*/judikatura-section/header-j/veta");
 								HtmlAgilityPack.HtmlNode hVeta = vetaDoc.DocumentNode.SelectSingleNode("//table");
 								hVeta = hVeta.FirstChild;
 								while (hVeta != null)
@@ -409,7 +409,7 @@ namespace DataMiningCourts
 												throw new WebException();
 										}
 										else
-											xn.InnerXml += "<p><span>" + hVeta.InnerText.Trim() + "</span></p>";
+											xn.InnerXml += "<p>" + hVeta.InnerText.Trim() + "</p>";
 									}
 									hVeta = hVeta.NextSibling;
 								}
@@ -424,7 +424,7 @@ namespace DataMiningCourts
 						}
 
 						// stáhne se hlavička
-						XmlNode xnIdExternal = data.SelectSingleNode("//id-external");
+						XmlNode xnIdExternal = data.SelectSingleNode("/*/judikatura-section/header-j/id-external");
 						urlToDownload = String.Format("{0}{1}", NSS_DETAIL_ROZHODNUTI, xnIdExternal.InnerText);
 						HtmlAgilityPack.HtmlDocument detailDoc = new HtmlAgilityPack.HtmlDocument();
 						try
@@ -456,7 +456,7 @@ namespace DataMiningCourts
 						}
 
 						// anonymizovanaVerzeRozhodnuti != null || this.cbStahovatPouzeSPDF.Checked == false
-						string rokSchvaleni = data.DocumentElement.SelectSingleNode("//datschvaleni").InnerText.Substring(0, 4);
+						string rokSchvaleni = data.DocumentElement.FirstChild.SelectSingleNode("./datschvaleni").InnerText.Substring(0, 4);
 						// citation = NSS 22/2012
 						int iRokSchvaleni = Int32.Parse(rokSchvaleni);
 						int NSS_cisloDBPoslednihoZpracovanehoDokumentu = NSS_citationService.GetNextCitation(iRokSchvaleni);
@@ -468,12 +468,10 @@ namespace DataMiningCourts
 
 						// pathPathWithoutExtension = DocumentName
 						string sReferenceNumber = data.DocumentElement.FirstChild.SelectSingleNode("./citace").InnerText;
-						string sDocumentName;
-						string judikaturaSectionDokumentName;
-						Utility.CreateDocumentName("J", sReferenceNumber, rokSchvaleni, out sDocumentName);
-						Utility.CreateDocumentName("J", sCitation, rokSchvaleni, out judikaturaSectionDokumentName);
+						Utility.CreateDocumentName("J", sReferenceNumber, rokSchvaleni, out string sDocumentName);
+						Utility.CreateDocumentName("J", sCitation, rokSchvaleni, out string judikaturaSectionDokumentName);
 						/* Dokumentname je součástí JudikaturaSection. */
-						XmlNode judikaturaSection = data.SelectSingleNode("//judikatura-section");
+						XmlNode judikaturaSection = data.SelectSingleNode("/*/judikatura-section");
 						judikaturaSection.Attributes["id-block"].Value = judikaturaSectionDokumentName;
 						data.DocumentElement.Attributes["DokumentName"].Value = sDocumentName;
 
@@ -547,7 +545,7 @@ namespace DataMiningCourts
 						// nastavím info4xml = účastníky řízení
 						s = sbUcastniciRizeni.ToString().Replace("&", "&amp;");
 						if (!String.IsNullOrEmpty(s))
-							data.DocumentElement.SelectSingleNode("//info4xml").InnerXml = s;
+							data.SelectSingleNode("/*/judikatura-section/header-j/info4xml").InnerXml = s;
 
 						// formát souboru => J_RRRR_NSS_číslo
 						string sHeaderFullPath = String.Format(@"{0}.xml", sFullPathWithoutExtension);
@@ -559,23 +557,6 @@ namespace DataMiningCourts
 							NSS_citationService.RevertCitationForAYear(iRokSchvaleni);
 							continue;
 						}
-
-						// odstranění prázdných elementů z hlavičky
-						xn = data.DocumentElement.FirstChild.FirstChild;
-						XmlNode xn2;
-						while (xn != null)
-						{
-							if (String.IsNullOrWhiteSpace(xn.InnerText))
-							{
-								xn2 = xn.NextSibling;
-								xn.ParentNode.RemoveChild(xn);
-								xn = xn2;
-								continue;
-							}
-							xn = xn.NextSibling;
-						}
-						/* Před uložením dokumentu protřídíme obsah hlavičky */
-						UtilityXml.DeleteEmptyNodesFromHeaders(data);
 
 						data.Save(sHeaderFullPath);
 						NSS_citationService.CommitCitationForAYear(iRokSchvaleni);
@@ -657,7 +638,7 @@ namespace DataMiningCourts
 					{
 						// už je všechno hotovo; To vím, protože abych mohl zpracovat pdf, musím mít xml, ...
 						this.processedBar.BeginInvoke(UpdateProgress, new object[] { true });
-						FinalizeLogs();
+						FinalizeLogs(false);
 						MessageBox.Show("1) Spusťte program pro převod pdf dokumentů na doc dokumenty!\r\n2) Vyberte všechny stažené doc dokumenty a převeďte je!\r\n3) Stiskněte tlačítko doc->xml", "Dokončení převodu NSS", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
 					}
@@ -670,7 +651,7 @@ namespace DataMiningCourts
 				{
 					// už je všechno hotovo; To vím, protože abych mohl zpracovat pdf, musím mít xml, ...
 					this.processedBar.BeginInvoke(UpdateProgress, new object[] { true });
-					FinalizeLogs();
+					FinalizeLogs(false);
 					MessageBox.Show("1) Spusťte program pro převod pdf dokumentů na doc dokumenty!\r\n2) Vyberte všechny stažené doc dokumenty a převeďte je!\r\n3) Stiskněte tlačítko doc->xml", "Dokončení převodu NSS", MessageBoxButtons.OK, MessageBoxIcon.Information);
 				}
 			});
@@ -1241,7 +1222,7 @@ namespace DataMiningCourts
 			{
 				this.processedBar.BeginInvoke(UpdateProgress, new object[] { 100 });
 			}
-			FinalizeLogs();
+			FinalizeLogs(false);
 		}
 
 		/// <summary>
@@ -1431,8 +1412,49 @@ namespace DataMiningCourts
 			}
 			emptyRows.ForEach(n => htmlText.RemoveChild(n));
 
+			// nadřazené předpisy
+			// vytvoří se z odkazů, ale pouze na paragrafy nebo články, které se v textu vyskytují
+			// alespoň 4x. Ještě se k nim přidají odkazy z právní věty - zde nekontroluje počet výskytů.
+			Dictionary<string,int> hrefs = new Dictionary<string, int>();
+			XmlNodeList xNodes = xnHtml.SelectNodes(".//link[(contains(@href,'pf') or contains(@href,'cl')) and not(@type='add')]");
+			foreach(XmlNode xnLink in xNodes)
+			{
+				if (!hrefs.Keys.Contains(xnLink.Attributes["href"].Value))
+					hrefs.Add(xnLink.Attributes["href"].Value, 1);
+				else
+					++hrefs[xnLink.Attributes["href"].Value];
+			}
+			// a z právní věty
+			xNodes = dOut.SelectNodes("/*/judikatura-section/header-j/veta//link[(contains(@href,'pf') or contains(@href,'cl')) and not(@type='add')]");
+			foreach (XmlNode xnLink in xNodes)
+			{
+				if (!hrefs.Keys.Contains(xnLink.Attributes["href"].Value))
+					hrefs.Add(xnLink.Attributes["href"].Value, 4);
+				else
+					hrefs[xnLink.Attributes["href"].Value] = 4;
+			}
+			if (dbConnection.State == System.Data.ConnectionState.Closed)
+				this.dbConnection.Open();
+			XmlNode xnZakladniPredpis = dOut.DocumentElement.FirstChild.SelectSingleNode("./zakladnipredpis");
+
+			SqlCommand cmd = dbConnection.CreateCommand();
+			var vlist = hrefs.Where(k => k.Value >= 4);
+			foreach(KeyValuePair<string,int> kvp in vlist)
+			{
+				string[] values = kvp.Key.Split('&');
+				cmd.CommandText = "SELECT Citation FROM Dokument WHERE DokumentName='" + values[0] + "'";
+				Object oResult = cmd.ExecuteScalar();
+				string sArticle = values[1].Replace("pf", "§ ").Replace("cl", "čl. ");
+				xnZakladniPredpis.InnerXml += "<item><link href=\"" + kvp.Key.Replace("&", "&amp;") + "\">" + oResult.ToString() + " " + sArticle + "</link></item>";
+			}
+
+			AddLawArea(pConn, dOut.DocumentElement.FirstChild, false);
+
 			UtilityXml.RemoveRedundantEmptyRowsInXmlDocument(ref xnHtml);
 			UtilityXml.AddCite(dOut, sDocumentName, pConn);
+
+			// odstranění prázdných elementů z hlavičky
+			UtilityXml.RemoveEmptyElementsFromHeader(ref dOut);
 
 			// uložení
 			dOut.Save(sPathResultXml);

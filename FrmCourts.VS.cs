@@ -151,7 +151,7 @@ namespace DataMiningCourts
                     }
                 }
                 this.processedBar.BeginInvoke(UpdateProgress, new object[] { true });
-                FinalizeLogs();
+                FinalizeLogs(false);
                 MessageBox.Show("1) Spusťte program pro převod pdf dokumentů na doc dokumenty!\r\n2) Vyberte všechny stažené doc dokumenty a převeďte je!\r\n3) Stiskněte tlačítko doc->xml", "Dokončení převodu VS", MessageBoxButtons.OK, MessageBoxIcon.Information);
             });
         }
@@ -338,7 +338,7 @@ namespace DataMiningCourts
             {
                 this.processedBar.BeginInvoke(UpdateProgress, new object[] { 100 });
             }
-            FinalizeLogs();
+            FinalizeLogs(false);
         }
 
         private void ProvedVSAkciUlozeniOdkazu()
@@ -478,7 +478,7 @@ namespace DataMiningCourts
 
             this.CorrectionDocumentVS(ref dOut);
 
-            var xnVeta = dOut.SelectSingleNode("//veta");
+            var xnVeta = dOut.SelectSingleNode("/*/judikatura-section/header-j/veta");
             var xnP = dOut.CreateElement("p");
             xnVeta.AppendChild(xnP);
             xnP.InnerText = veta;
@@ -492,20 +492,18 @@ namespace DataMiningCourts
                 LinkingHelper.AddBaseLaws(dOut, string.Join(Environment.NewLine, zakladniPredpisy), xnZaklPredpis);
             }
 
-            var date = DateTime.MinValue;
+            DateTime? date = null;
             var matchDate = regDate.Match(dOut.InnerText);
             if (matchDate.Success)
             {
                 var xnDateApproval = dOut.SelectSingleNode("//datschvaleni");
-                if (!DateTime.TryParse(Utility.ConvertLongDateIntoUniversalDate(matchDate.Groups["date"].Value), out date))
-                {
-                    date = DateTime.MinValue;
-                }
-                xnDateApproval.InnerText = date.ToString("yyyy-MM-dd");
+				Utility.ConvertDateIntoUniversalFormat(matchDate.Groups["date"].Value, out date);
+				if (date.HasValue)
+					xnDateApproval.InnerText = date.Value.ToString("yyyy-MM-dd");
             }
 
-            var citationNumber = this.VS_citationService.GetNextCitation(date.Year);
-            var sCitation = String.Format("{0}{1}/{2}", VS_citationService.GetCitationPrefix(Courts.cVS), citationNumber, date.Year);
+            var citationNumber = this.VS_citationService.GetNextCitation(date.Value.Year);
+            var sCitation = String.Format("{0}{1}/{2}", VS_citationService.GetCitationPrefix(Courts.cVS), citationNumber, date.Value.Year);
             var xnCitation = dOut.DocumentElement.SelectSingleNode("./judikatura-section/header-j/citace");
             xnCitation.InnerText = sCitation;
 
@@ -537,7 +535,7 @@ namespace DataMiningCourts
 
             // uložení
             dOut.Save(sPathResultXml);
-            VS_citationService.CommitCitationForAYear(date.Year);
+            VS_citationService.CommitCitationForAYear(date.Value.Year);
             return true;
         }
 
